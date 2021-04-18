@@ -2,8 +2,9 @@ from pandas.core.frame import DataFrame
 
 
 def compute_sma(data: DataFrame, window: int):
-    sma = data['Close'].rolling(window=window, min_periods=1, center=False).mean()
-
+    sma = data['Close'].rolling(window=window,
+                                min_periods=1,
+                                center=False).mean()
     return sma
 
 
@@ -14,8 +15,10 @@ def compute_ewma(data: DataFrame):
 
 def compute_bollinger_bands(data: DataFrame):
     middle_band = data['Close'].rolling(window=20).mean()
-    upper_band = data['Close'].rolling(window=20).mean() + data['Close'].rolling(window=20).std()*2
-    lower_band = data['Close'].rolling(window=20).mean() - data['Close'].rolling(window=20).std()*2
+    upper_band = data['Close'].rolling(window=20).mean() + \
+        data['Close'].rolling(window=20).std()*2
+    lower_band = data['Close'].rolling(window=20).mean() - \
+        data['Close'].rolling(window=20).std()*2
 
     return upper_band, middle_band, lower_band
 

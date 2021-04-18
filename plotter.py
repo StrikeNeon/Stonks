@@ -3,19 +3,24 @@ import matplotlib.pyplot as plt
 from computation import compute_sma, compute_ewma, compute_bollinger_bands
 
 
-def plot_closing(data: DataFrame, title: str, sma: list = None, ewma: bool = False, bbands: bool = True):
+def plot_closing(data: DataFrame, title: str,
+                 sma: list = None, ewma: bool = False,
+                 bbands: bool = True):
     save_state = data  # not to skrew with the actual data
     plt.figure(figsize=(10, 10))
     plt.plot(save_state.index, save_state['Close'], label="Closing price")
     if sma:
         for item in sma:
             save_state[f"SMA{sma.index(item)}"] = compute_sma(data, item)
-            plt.plot(save_state[f"SMA{sma.index(item)}"], 'r--', label=f"SMA {item}")
+            plt.plot(save_state[f"SMA{sma.index(item)}"],
+                     'r--', label=f"SMA {item}")
     if ewma:
         save_state["EWMA"] = compute_ewma(data)
         plt.plot(save_state["EWMA"], 'g--', label="EWMA")
     if bbands:
-        save_state['upper_band'], save_state['middle_band'], save_state['lower_band'] = compute_bollinger_bands(data)
+        (save_state['upper_band'],
+         save_state['middle_band'],
+         save_state['lower_band']) = compute_bollinger_bands(data)
         plt.plot(save_state['upper_band'], 'c--', label="upper band")
         plt.plot(save_state['middle_band'], 'm--', label="middle band")
         plt.plot(save_state['lower_band'], 'y--', label="lower band")
@@ -29,10 +34,13 @@ def plot_closing(data: DataFrame, title: str, sma: list = None, ewma: bool = Fal
 def plot_sma(data: DataFrame, window: int = 50, live: bool = False):
     sma = compute_sma(data, window)
     plt.figure(figsize=(10, 10))
-    plt.plot(sma.index, sma, label=f"{window} day window" if not live else f"{window} minute window")
+    plt.plot(sma.index, sma,
+             label=f"{window} day window" if not live
+             else f"{window} minute window")
     plt.xlabel("date")
     plt.ylabel("$ price")
-    plt.title(f"{window} day window" if not live else f"{window} minute window")
+    plt.title(f"{window} day window" if not live
+              else f"{window} minute window")
     plt.legend()
     plt.show()
 

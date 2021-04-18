@@ -2,8 +2,8 @@ from datetime import datetime
 from utils import setup_dirs
 from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
-from computation import compute_returns, compute_monthly_returns
-from strata import SMAC
+from computation import compute_returns, compute_monthly_returns, compute_sma
+from strata import SMAC, scalp
 
 setup_dirs()
 
@@ -26,9 +26,11 @@ def live_test():
     # live data
     aapl_L = get_live_data_yahoo('AAPL', period="20m", interval="1m")
     print(aapl_L)
-    sma = [20]
-    plot_closing(aapl_L, "AAPL today", sma=sma, ewma=False)
+    sma_l = [20]
+    plot_closing(aapl_L, "AAPL today", sma=sma_l, ewma=False, bbands=False)
     # plot_sma(aapl_L, window=20, live=True)
+    sma = compute_sma(aapl_L, 20)
+    print(scalp(aapl_L, sma))
 
 
 live_test()
