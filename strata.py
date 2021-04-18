@@ -19,17 +19,21 @@ def SMAC(data: DataFrame, windows: list = [50, 120]):
     return signal_df
 
 
-def scalp(data: DataFrame, sma: Series):
+def scalp(data: DataFrame,
+          sma: Series,
+          index: str = "Adj Close"):
     # compares latest closing price and latest moving avg
     # returns true if closing price is above mav
-    current_closing = data["Close"].iloc[-1]
+    current_closing = data[index].iloc[-1]
     current_mav = sma.iloc[-1]
     if current_closing > current_mav:
         return True
     return False
 
 
-def cached_scalp(data: DataFrame, bands: tuple):
+def cached_scalp(data: DataFrame,
+                 bands: tuple,
+                 index: str = "Adj Close"):
     """compares latest closing price and latest moving avg
        1 is a positive signal of a rising value, sell
        0 is a signal that the value is higher than 20 min avg,
@@ -38,7 +42,7 @@ def cached_scalp(data: DataFrame, bands: tuple):
          buy if you have spare allocated bank % and if fall signal number in
          cache is not above panic sell level"""
     panic = False
-    current_closing = data["Close"].iloc[-1]
+    current_closing = data[index].iloc[-1]
     current_upper_band = bands[1].iloc[-1]
     current_middle_band = bands[1].iloc[-1]
     current_lower_band = bands[1].iloc[-1]

@@ -5,7 +5,7 @@ from computation import compute_sma, compute_ewma, compute_bollinger_bands
 
 def plot_closing(data: DataFrame, title: str,
                  sma: list = None, ewma: bool = False,
-                 bbands: bool = True):
+                 bbands: bool = False):
     save_state = data  # not to skrew with the actual data
     plt.figure(figsize=(10, 10))
     plt.plot(save_state.index, save_state['Close'], label="Closing price")

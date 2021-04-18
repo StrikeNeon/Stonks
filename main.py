@@ -28,7 +28,7 @@ def live_test():
     aapl_L = get_live_data_yahoo('AAPL', period="20m", interval="1m")
     print(aapl_L)
     sma_l = [20]
-    plot_closing(aapl_L, "AAPL today", sma=sma_l, ewma=False, bbands=False)
+    plot_closing(aapl_L, "AAPL today", sma=sma_l)
     # plot_sma(aapl_L, window=20, live=True)
     sma = compute_sma(aapl_L, 20)
     print(scalp(aapl_L, sma))
