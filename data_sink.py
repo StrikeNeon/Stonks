@@ -5,7 +5,8 @@ from datetime import datetime
 import yfinance as yf
 
 
-def get_history_data(symbol: str, start_date: datetime, end_date: datetime, source: str = "yahoo"):
+def get_history_data(symbol: str, start_date: datetime,
+                     end_date: datetime, source: str = "yahoo"):
     data = data_reader.DataReader(symbol,
                                   start=start_date,
                                   end=end_date,
