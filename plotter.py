@@ -26,22 +26,22 @@ def plot_closing(data: DataFrame, title: str, sma: list = None, ewma: bool = Fal
     plt.show()
 
 
-def plot_sma(data, window):
+def plot_sma(data: DataFrame, window: int = 50, live: bool = False):
     sma = compute_sma(data, window)
     plt.figure(figsize=(10, 10))
-    plt.plot(sma.index, sma, label=f"{window} day window")
+    plt.plot(sma.index, sma, label=f"{window} day window" if not live else f"{window} minute window")
     plt.xlabel("date")
     plt.ylabel("$ price")
-    plt.title(f"{window} day window")
+    plt.title(f"{window} day window" if not live else f"{window} minute window")
     plt.legend()
     plt.show()
 
 
-def plot_SMAC_signals(data, signals):
+def plot_SMAC_signals(data: DataFrame, signals: DataFrame):
     fig = plt.figure()
     plt1 = fig.add_subplot(111,  ylabel='$ price')
     data['Close'].plot(ax=plt1, color='r', lw=2.)
-    signals[['short_mav', 'long_mav']].plot(ax=plt1, lw=2., figsize=(12,8))
+    signals[['short_mav', 'long_mav']].plot(ax=plt1, lw=2., figsize=(12, 8))
     plt1.plot(signals.loc[signals.positions == -1.0].index, signals.short_mav[signals.positions == -1.0],'v', markersize=10, color='k')
     plt1.plot(signals.loc[signals.positions == 1.0].index, signals.short_mav[signals.positions == 1.0], '^', markersize=10, color='m')
     plt.show()
