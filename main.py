@@ -2,8 +2,9 @@ from datetime import datetime
 from utils import setup_dirs
 from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
-from computation import compute_returns, compute_monthly_returns, compute_sma
-from strata import SMAC, scalp
+from computation import (compute_returns, compute_monthly_returns,
+                         compute_sma, compute_bollinger_bands)
+from strata import SMAC, scalp, cached_scalp
 
 setup_dirs()
 
@@ -31,6 +32,9 @@ def live_test():
     # plot_sma(aapl_L, window=20, live=True)
     sma = compute_sma(aapl_L, 20)
     print(scalp(aapl_L, sma))
+
+    bands = compute_bollinger_bands(aapl_L)
+    print(cached_scalp(aapl_L, bands))
 
 
 live_test()
