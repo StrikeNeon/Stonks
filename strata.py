@@ -49,3 +49,43 @@ def banded_scalp(data: DataFrame,
     else:
         signal = 0
     return signal
+
+
+# def day_trade(data: DataFrame,
+#                  bands: tuple,
+#                  index: str = "Adj Close"):
+#     """ panic is a point where you dump it in concurrent price falls
+#         compares latest closing price and latest moving avg
+#         0 is a hold signal
+#         1 is a buy signal
+#         -1 is a sell signal
+#         in case of a rising value, by upper band, hold is advised
+#         if the value is higher than 20 min avg,
+#             but not higher than the upper bollinger band, sell,
+#             as it is unlikely to grow further
+#         if the value is falling to a point of panic
+#             (lower band being below start of day price),
+#             sell it off to buy up later if it bounces back,
+#             this will also renew cached value as it was effectively re-entry"""
+#     panic = False
+#     current_closing = data[index].iloc[-1]
+#     current_upper_band = bands[1].iloc[-1]
+#     current_middle_band = bands[1].iloc[-1]
+#     current_lower_band = bands[1].iloc[-1]
+#     start_of_day = 144.139999
+#     if start_of_day > current_lower_band:
+#         panic = True
+#     if current_closing > current_upper_band:
+#         if panic:
+#             signal = 1
+#         else:
+#             signal = 0
+#     elif (current_closing > current_middle_band
+#           and current_closing < current_upper_band):
+#         signal = -1
+#     elif current_closing < current_lower_band:
+#         if panic:
+#             signal = -1
+#         else:
+#             signal = 0
+#     return signal, panic
