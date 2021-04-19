@@ -31,26 +31,21 @@ def scalp(data: DataFrame,
     return False
 
 
-def cached_scalp(data: DataFrame,
+def banded_scalp(data: DataFrame,
                  bands: tuple,
                  index: str = "Adj Close"):
-    """compares latest closing price and latest moving avg
-       1 is a positive signal of a rising value, sell
-       0 is a signal that the value is higher than 20 min avg,
-         but not higher than the upper bollinger band, so hold
-       -1 is warning signal - this means the value is falling,
-         buy if you have spare allocated bank % and if fall signal number in
-         cache is not above panic sell level"""
-    panic = False
+    """ compares latest closing price and bollinger bands
+        0 is a hold signal
+        1 is a signal to sell with increased profit %
+        -1 is a signal to sell with normal profit %"""
     current_closing = data[index].iloc[-1]
     current_upper_band = bands[1].iloc[-1]
     current_middle_band = bands[1].iloc[-1]
-    current_lower_band = bands[1].iloc[-1]
     if current_closing > current_upper_band:
         signal = 1
-    if current_closing > current_middle_band and \
-       current_closing < current_upper_band:
-        signal = 0
-    if current_closing < current_lower_band:
+    elif (current_closing > current_middle_band
+          and current_closing < current_upper_band):
         signal = -1
-    return signal, panic
+    else:
+        signal = 0
+    return signal

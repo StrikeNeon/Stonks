@@ -4,7 +4,7 @@ from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
                          compute_sma, compute_bollinger_bands)
-from strata import SMAC, scalp, cached_scalp
+from strata import SMAC, scalp, banded_scalp
 
 setup_dirs()
 
@@ -34,7 +34,7 @@ def live_test():
     print(scalp(aapl_L, sma))
 
     bands = compute_bollinger_bands(aapl_L)
-    print(cached_scalp(aapl_L, bands))
+    print(banded_scalp(aapl_L, bands))
 
 
 live_test()

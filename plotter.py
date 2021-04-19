@@ -5,10 +5,10 @@ from computation import compute_sma, compute_ewma, compute_bollinger_bands
 
 def plot_closing(data: DataFrame, title: str,
                  sma: list = None, ewma: bool = False,
-                 bbands: bool = False):
+                 bbands: bool = False, data_index: str = "Adj Close"):
     save_state = data  # not to skrew with the actual data
     plt.figure(figsize=(10, 10))
-    plt.plot(save_state.index, save_state['Close'], label="Closing price")
+    plt.plot(save_state.index, save_state[data_index], label="Closing price")
     if sma:
         for item in sma:
             save_state[f"SMA{sma.index(item)}"] = compute_sma(data, item)
@@ -45,10 +45,11 @@ def plot_sma(data: DataFrame, window: int = 50, live: bool = False):
     plt.show()
 
 
-def plot_SMAC_signals(data: DataFrame, signals: DataFrame):
+def plot_SMAC_signals(data: DataFrame,
+                      signals: DataFrame, data_index: str = "Adj Close"):
     fig = plt.figure()
     plt1 = fig.add_subplot(111,  ylabel='$ price')
-    data['Close'].plot(ax=plt1, color='r', lw=2.)
+    data[data_index].plot(ax=plt1, color='r', lw=2.)
     signals[['short_mav', 'long_mav']].plot(ax=plt1, lw=2., figsize=(12, 8))
     plt1.plot(signals.loc[signals.positions == -1.0].index,
               signals.short_mav[signals.positions == -1.0],
