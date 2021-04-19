@@ -51,6 +51,9 @@ def scalp_test(symbol: str = 'AAPL',
         print(f"value bought: {live_data[data_index].iloc[0]}, value sold: {sell_value}")
         start_value += sell_value * start_stocks
         start_value -= live_data[data_index].iloc[-1] * start_stocks
+    else:
+        if live_data[data_index].iloc[0] > live_data[data_index].iloc[-1]:
+            start_value -= live_data[data_index].iloc[-1] * start_stocks
 
     print(f"total value: {start_value}")
 
