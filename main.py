@@ -4,7 +4,7 @@ from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
                          compute_sma)
-from strata import SMAC, advanced_scalp
+from strata import SMAC, scalp
 
 setup_dirs()
 
@@ -33,36 +33,43 @@ def live_test():
 
 
 def scalp_test(symbol: str = 'AAPL',
-               start_value: int = 5000,
+               bank_value: int = 5000,
                start_stocks: int = 5,
                data_index: str = "Adj Close"):
     live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
     sma = compute_sma(live_data, window=20)
-    print(f"current value {live_data[data_index].iloc[-1]}")
-    print(f"sma: {sma.iloc[-1]}")
-    signal = advanced_scalp(live_data, sma)
+
+    current_value = live_data[data_index].iloc[-1]
+    start_value = live_data[data_index].iloc[0]
+    signal = scalp(live_data, sma)
     if signal == 0:
         sell_value = None
-    elif signal == 2:
-        sell_value = live_data[data_index].iloc[0] * 1.010
     elif signal == 1:
-        sell_value = live_data[data_index].iloc[0] * 1.007
-    print(f"signal: {signal}")
+        sell_value = current_value * 1.007
     if sell_value:
-        print(f"value bought: {live_data[data_index].iloc[0]},\
-               value sold: {sell_value}")
-        start_value += sell_value * start_stocks
-        start_value -= live_data[data_index].iloc[-1] * start_stocks
+        bank_value += sell_value * start_stocks
+        bank_value -= current_value * start_stocks
     else:
-        if live_data[data_index].iloc[0] > live_data[data_index].iloc[-1]:
-            start_value -= (live_data[data_index].iloc[0]
-                            - live_data[data_index].iloc[-1]) * start_stocks
-        elif live_data[data_index].iloc[0] < live_data[data_index].iloc[-1]:
-            start_value += (live_data[data_index].iloc[0]
-                            - live_data[data_index].iloc[-1]) * start_stocks
+        if start_value > current_value:
+            bank_value -= (start_value
+                           - current_value) * start_stocks
+        elif start_value < current_value:
+            bank_value += (start_value
+                           - current_value) * start_stocks
 
-    print(f"total value: {start_value}")
+    return (start_value,  current_value, sma.iloc[-1],
+            signal, sell_value, bank_value)
 
 
 live_test()
-scalp_test()
+(start_value,  current_value,
+ current_sma, signal,
+ sell_value, bank_value) = scalp_test()
+
+print(f"""
+        current value {current_value}
+        sma: {current_sma}
+        signal: {signal}
+        value bought: {start_value}, value sold: {sell_value}
+        total value: {bank_value}
+       """)
