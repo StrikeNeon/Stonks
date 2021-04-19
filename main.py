@@ -4,7 +4,7 @@ from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
                          compute_sma, compute_bollinger_bands)
-from strata import SMAC, scalp, banded_scalp
+from strata import SMAC, banded_scalp
 
 setup_dirs()
 
@@ -30,11 +30,30 @@ def live_test():
     sma_l = [20]
     plot_closing(aapl_L, "AAPL today", sma=sma_l)
     # plot_sma(aapl_L, window=20, live=True)
-    sma = compute_sma(aapl_L, 20)
-    print(scalp(aapl_L, sma))
 
-    bands = compute_bollinger_bands(aapl_L)
-    print(banded_scalp(aapl_L, bands))
+
+def scalp_test(symbol: str = 'AAPL',
+               start_value: int = 5000,
+               start_stocks: int = 5,
+               data_index: str = "Adj Close"):
+    live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
+    bands = compute_bollinger_bands(live_data)
+    print(f"current value {live_data[data_index].iloc[-1]}")
+    print(f"bands: {bands[0].iloc[-1]}, {bands[1].iloc[-1]}")
+    if banded_scalp(live_data, bands) == 0:
+        sell_value = None
+    elif banded_scalp(live_data, bands) == 2:
+        sell_value = live_data[data_index].iloc[0] * 1.010
+    elif banded_scalp(live_data, bands) == 1:
+        sell_value = live_data[data_index].iloc[0] * 1.007
+    print(f"signal: {banded_scalp(live_data, bands)}")
+    if sell_value:
+        print(f"value bought: {live_data[data_index].iloc[0]}, value sold: {sell_value}")
+        start_value += sell_value * start_stocks
+        start_value -= live_data[data_index].iloc[-1] * start_stocks
+
+    print(f"total value: {start_value}")
 
 
 live_test()
+scalp_test()

@@ -22,30 +22,33 @@ def SMAC(data: DataFrame, windows: list = [50, 120]):
 def scalp(data: DataFrame,
           sma: Series,
           index: str = "Adj Close"):
-    # compares latest closing price and latest moving avg
-    # returns true if closing price is above mav
+    """ basic scalping method
+        0 is a hold signal
+        1 is a signal to sell with normal profit %"""
     current_closing = data[index].iloc[-1]
     current_mav = sma.iloc[-1]
     if current_closing > current_mav:
-        return True
-    return False
+        signal = 1
+    else:
+        signal = 0
+    return signal
 
 
 def banded_scalp(data: DataFrame,
                  bands: tuple,
-                 index: str = "Adj Close"):
+                 data_index: str = "Adj Close"):
     """ compares latest closing price and bollinger bands
         0 is a hold signal
-        1 is a signal to sell with increased profit %
-        -1 is a signal to sell with normal profit %"""
-    current_closing = data[index].iloc[-1]
-    current_upper_band = bands[1].iloc[-1]
+        1 is a signal to sell with normal profit %
+        2 is a signal to sell with increased profit %"""
+    current_closing = data[data_index].iloc[-1]
+    current_upper_band = bands[0].iloc[-1]
     current_middle_band = bands[1].iloc[-1]
     if current_closing > current_upper_band:
-        signal = 1
+        signal = 2
     elif (current_closing > current_middle_band
           and current_closing < current_upper_band):
-        signal = -1
+        signal = 1
     else:
         signal = 0
     return signal
@@ -53,7 +56,7 @@ def banded_scalp(data: DataFrame,
 
 # def day_trade(data: DataFrame,
 #                  bands: tuple,
-#                  index: str = "Adj Close"):
+#                  data_index: str = "Adj Close"):
 #     """ panic is a point where you dump it in concurrent price falls
 #         compares latest closing price and latest moving avg
 #         0 is a hold signal
@@ -68,7 +71,7 @@ def banded_scalp(data: DataFrame,
 #             sell it off to buy up later if it bounces back,
 #             this will also renew cached value as it was effectively re-entry"""
 #     panic = False
-#     current_closing = data[index].iloc[-1]
+#     current_closing = data[data_index].iloc[-1]
 #     current_upper_band = bands[1].iloc[-1]
 #     current_middle_band = bands[1].iloc[-1]
 #     current_lower_band = bands[1].iloc[-1]
