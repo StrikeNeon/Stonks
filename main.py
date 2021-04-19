@@ -3,8 +3,8 @@ from utils import setup_dirs
 from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
-                         compute_sma, compute_bollinger_bands)
-from strata import SMAC, banded_scalp
+                         compute_sma)
+from strata import SMAC, advanced_scalp
 
 setup_dirs()
 
@@ -40,7 +40,7 @@ def scalp_test(symbol: str = 'AAPL',
     sma = compute_sma(live_data, window=20)
     print(f"current value {live_data[data_index].iloc[-1]}")
     print(f"sma: {sma.iloc[-1]}")
-    signal = banded_scalp(live_data, sma)
+    signal = advanced_scalp(live_data, sma)
     if signal == 0:
         sell_value = None
     elif signal == 2:

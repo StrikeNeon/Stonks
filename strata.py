@@ -34,7 +34,7 @@ def scalp(data: DataFrame,
     return signal
 
 
-def banded_scalp(data: DataFrame,
+def advanced_scalp(data: DataFrame,
                  sma: Series,
                  data_index: str = "Adj Close"):
     """ compares latest closing price and bollinger bands
@@ -44,7 +44,7 @@ def banded_scalp(data: DataFrame,
     current_closing = data[data_index].iloc[-1]
     current_mav = sma.iloc[-1]
     if current_closing > current_mav:
-        if (current_mav+(current_closing-current_mav)) > (current_mav+(current_closing-current_mav)) * 2:
+        if (current_mav+(current_closing-current_mav)) < (current_mav+(current_closing-current_mav) * 2):
             signal = 2
         else:
             signal = 1
