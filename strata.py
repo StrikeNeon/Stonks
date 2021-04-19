@@ -35,20 +35,19 @@ def scalp(data: DataFrame,
 
 
 def banded_scalp(data: DataFrame,
-                 bands: tuple,
+                 sma: Series,
                  data_index: str = "Adj Close"):
     """ compares latest closing price and bollinger bands
         0 is a hold signal
         1 is a signal to sell with normal profit %
         2 is a signal to sell with increased profit %"""
     current_closing = data[data_index].iloc[-1]
-    current_upper_band = bands[0].iloc[-1]
-    current_middle_band = bands[1].iloc[-1]
-    if current_closing > current_upper_band:
-        signal = 2
-    elif (current_closing > current_middle_band
-          and current_closing < current_upper_band):
-        signal = 1
+    current_mav = sma.iloc[-1]
+    if current_closing > current_mav:
+        if (current_mav+(current_closing-current_mav)) > (current_mav+(current_closing-current_mav)) * 2:
+            signal = 2
+        else:
+            signal = 1
     else:
         signal = 0
     return signal

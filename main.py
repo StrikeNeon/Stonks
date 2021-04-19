@@ -37,23 +37,26 @@ def scalp_test(symbol: str = 'AAPL',
                start_stocks: int = 5,
                data_index: str = "Adj Close"):
     live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
-    bands = compute_bollinger_bands(live_data)
+    sma = compute_sma(live_data, window=20)
     print(f"current value {live_data[data_index].iloc[-1]}")
-    print(f"bands: {bands[0].iloc[-1]}, {bands[1].iloc[-1]}")
-    if banded_scalp(live_data, bands) == 0:
+    print(f"sma: {sma.iloc[-1]}")
+    signal = banded_scalp(live_data, sma)
+    if signal == 0:
         sell_value = None
-    elif banded_scalp(live_data, bands) == 2:
+    elif signal == 2:
         sell_value = live_data[data_index].iloc[0] * 1.010
-    elif banded_scalp(live_data, bands) == 1:
+    elif signal == 1:
         sell_value = live_data[data_index].iloc[0] * 1.007
-    print(f"signal: {banded_scalp(live_data, bands)}")
+    print(f"signal: {signal}")
     if sell_value:
-        print(f"value bought: {live_data[data_index].iloc[0]}, value sold: {sell_value}")
+        print(f"value bought: {live_data[data_index].iloc[0]},\
+               value sold: {sell_value}")
         start_value += sell_value * start_stocks
         start_value -= live_data[data_index].iloc[-1] * start_stocks
     else:
         if live_data[data_index].iloc[0] > live_data[data_index].iloc[-1]:
-            start_value -= live_data[data_index].iloc[-1] * start_stocks
+            start_value -= (live_data[data_index].iloc[0]
+                            - live_data[data_index].iloc[-1]) * start_stocks
 
     print(f"total value: {start_value}")
 
