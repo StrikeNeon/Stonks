@@ -33,7 +33,6 @@ def scalp(data: DataFrame,
         signal = 0
     return signal
 
-
 # def day_trade(data: DataFrame,
 #                  bands: tuple,
 #                  data_index: str = "Adj Close"):

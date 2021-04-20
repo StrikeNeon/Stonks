@@ -5,6 +5,8 @@ from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
                          compute_sma)
 from strata import SMAC, scalp
+from time import sleep
+
 
 setup_dirs()
 
@@ -61,15 +63,20 @@ def scalp_test(symbol: str = 'AAPL',
             signal, sell_value, bank_value)
 
 
-live_test()
-(start_value,  current_value,
- current_sma, signal,
- sell_value, bank_value) = scalp_test()
+# live_test()
+hours = 3
+bank_value = 5000
+for i in range(hours*3):
+    (start_value,  current_value,
+     current_sma, signal,
+     sell_value, bank_value) = scalp_test(bank_value=bank_value)
 
-print(f"""
-        current value {current_value}
-        sma: {current_sma}
-        signal: {signal}
-        value bought: {start_value}, value sold: {sell_value}
-        total value: {bank_value}
-       """)
+    print(f"""
+            current value {current_value}
+            sma: {current_sma}
+            signal: {signal}
+            value bought: {start_value}, value sold: {sell_value}
+            total value: {bank_value}
+        """)
+    print("sleeping")
+    sleep(60*20)  # sleep for 20 minutes
