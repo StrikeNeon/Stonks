@@ -20,8 +20,8 @@ def SMAC(data: DataFrame, windows: list = [50, 120]):
 
 
 def scalp(data: DataFrame,
-          sma: Series,
-          index: str = "Adj Close"):
+                sma: Series,
+                index: str = "Adj Close"):
     """ basic scalping method
         0 is a hold signal
         1 is a signal to sell with normal profit %"""
