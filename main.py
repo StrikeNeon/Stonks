@@ -1,6 +1,7 @@
 from datetime import datetime
-import asyncio
-from utils import setup_dirs
+from dateutil import tz
+from pytz import timezone
+from utils import setup_dirs, local_to_est
 from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
@@ -36,10 +37,10 @@ def live_test():
     # plot_sma(aapl_L, window=20, live=True)
 
 
-def scalp_test(symbol: str = 'AAPL',
-               bank_value: int = 5000,
-               start_stocks: int = 5,
-               data_index: str = "Adj Close"):
+def scalp_operation(symbol: str = 'AAPL',
+                    bank_value: int = 5000,
+                    start_stocks: int = 5,
+                    data_index: str = "Adj Close"):
     live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
     sma = compute_sma(live_data, window=20)
 
@@ -67,7 +68,7 @@ def scalp_test(symbol: str = 'AAPL',
 
 # live_test()
 def trade_routine(symbols: dict):
-    hours = 3
+    hours = 8
     report = {key: {"start_value": None,
                     "current_value": None,
                     "current_sma": None,
@@ -75,36 +76,59 @@ def trade_routine(symbols: dict):
                     "sell_value": None,
                     "bank_value": value["allocated_bank"]}
               for key, value in symbols.items()}
-    for i in range(hours*3):
-        for symbol in symbols.keys():
-            if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
-                (report[symbol]["start_value"],
-                 report[symbol]["current_value"],
-                 report[symbol]["current_sma"],
-                 report[symbol]["signal"],
-                 report[symbol]["sell_value"],
-                 report[symbol]["bank_value"]) = scalp_test(symbol=symbol,
-                                                            bank_value=report[symbol]["bank_value"],
-                                                            start_stocks=symbols[symbol]["start_stocks"])
-                print(f"""{report[symbol]} report:
-                            current value {report[symbol]['current_value']}
-                            sma: {report[symbol]['current_sma']}
-                            signal: {report[symbol]['signal']}
-                            value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
-                            total value: {report[symbol]['bank_value']}""")
-                print("sleeping")
+    local_dt = datetime.now(tz=tz.tzlocal())
+    current_est = local_to_est(local_dt)
+    trade_start = datetime(current_est.year,
+                           current_est.month,
+                           current_est.day,
+                           hour=9,
+                           minute=30,
+                           tzinfo=timezone('US/Eastern'))
+    trade_end = datetime(current_est.year,
+                         current_est.month,
+                         current_est.day,
+                         hour=16,
+                         minute=30,
+                         tzinfo=timezone('US/Eastern'))
+    while True:
+        if current_est >= trade_start:
+            for i in range(hours*3):
+                for symbol in symbols.keys():
+                    if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
+                        (report[symbol]["start_value"],
+                        report[symbol]["current_value"],
+                        report[symbol]["current_sma"],
+                        report[symbol]["signal"],
+                        report[symbol]["sell_value"],
+                        report[symbol]["bank_value"]) = scalp_operation(symbol=symbol,
+                                                                        bank_value=report[symbol]["bank_value"],
+                                                                        start_stocks=symbols[symbol]["start_stocks"])
+                        print(f"""{report[symbol]} report:
+                                    current value {report[symbol]['current_value']}
+                                    sma: {report[symbol]['current_sma']}
+                                    signal: {report[symbol]['signal']}
+                                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                                    total value: {report[symbol]['bank_value']}""")
+                        print("sleeping")
+                    else:
+                        print(f"bank fell below threshold for {symbol}")
+                        print(f"""{report[symbol]} report:
+                                    current value {report[symbol]['current_value']}
+                                    sma: {report[symbol]['current_sma']}
+                                    signal: {report[symbol]['signal']}
+                                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                                    total value: {report[symbol]['bank_value']}""")
                 sleep(60*20)  # sleep for 20 minutes
-            else:
-                print(f"bank fell below threshold for {symbol}")
-                print(f"""{report[symbol]} report:
-                            current value {report[symbol]['current_value']}
-                            sma: {report[symbol]['current_sma']}
-                            signal: {report[symbol]['signal']}
-                            value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
-                            total value: {report[symbol]['bank_value']}""")
+            return
+        elif current_est >= trade_end:
+            print("trade ended for today, moving to day operations")
+            return
+        else:
+            print(f"sleeping before trade: {(trade_start-current_est).total_seconds()} seconds")
+            sleep((trade_start-current_est).total_seconds())
 
 
-symbols = {"AAPL": {"allocated_bank": 1000, "start_stocks": 10, "stop_thresh": 10},
-           "UBER": {"allocated_bank": 1500, "start_stocks": 5, "stop_thresh": 10}
+symbols = {"AAPL": {"allocated_bank": 100, "start_stocks": 10, "stop_thresh": 10},
+           "UBER": {"allocated_bank": 200, "start_stocks": 5, "stop_thresh": 10}
            }
 trade_routine(symbols)
