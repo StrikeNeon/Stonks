@@ -1,7 +1,7 @@
 from datetime import datetime
 from dateutil import tz
 from pytz import timezone
-from utils import setup_dirs, local_to_est
+from utils import setup_dirs, date_reset
 from data_sink import get_history_data, get_live_data_yahoo
 from plotter import plot_closing, plot_sma, plot_SMAC_signals
 from computation import (compute_returns, compute_monthly_returns,
@@ -28,18 +28,11 @@ def history_test():
     plot_SMAC_signals(aapl, signals)
 
 
-def live_test():
-    # live data
-    aapl_L = get_live_data_yahoo('AAPL', period="20m", interval="1m")
-    print(aapl_L)
-    sma_l = [20]
-    plot_closing(aapl_L, "AAPL today", sma=sma_l)
-    # plot_sma(aapl_L, window=20, live=True)
-
-
 def scalp_operation(symbol: str = 'AAPL',
-                    bank_value: int = 5000,
-                    start_stocks: int = 5,
+                    bank_value: int = 500,
+                    stock_u_limit: int = 10,
+                    stock_l_limit: int = 1,
+                    stock:int=5,
                     data_index: str = "Adj Close"):
     live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
     sma = compute_sma(live_data, window=20)
@@ -49,35 +42,47 @@ def scalp_operation(symbol: str = 'AAPL',
     signal = scalp(live_data, sma)
     if signal == 0:
         sell_value = None
+        if stock < stock_u_limit:
+            bank_value, stock_operated = buy_sell_proto(bank_value, current_value,
+                                                        sell_value, stock_u_limit//2)
+            stock += stock_operated
     elif signal == 1:
         sell_value = current_value * 1.007
-    if sell_value:
-        bank_value = buy_sell_proto(bank_value, current_value,
-                                    sell_value, start_stocks)
-    else:
+    if sell_value and stock//2>stock_l_limit:
+        bank_value, stock_operated = buy_sell_proto(bank_value, current_value,
+                                                    sell_value, stock_u_limit//2)
+        stock -= stock_operated
+    elif not sell_value:
         if start_value > current_value:
             bank_value -= (start_value
-                           - current_value) * start_stocks
+                           - current_value) * stock
         elif start_value < current_value:
             bank_value += (start_value
-                           - current_value) * start_stocks
+                           - current_value) * stock
 
     return (start_value,  current_value, sma.iloc[-1],
-            signal, sell_value, bank_value)
+            signal, sell_value, bank_value, stock)
+
+
+def end_of_day_test(symbol: str):
+    data = get_live_data_yahoo(symbol, period="1d", interval="15m")
+    print(data)
+    sma_l = [20]
+    plot_closing(data, f"{symbol} today", sma=sma_l)
+    # plot_sma(aapl_L, window=20, live=True)
 
 
 # live_test()
 def trade_routine(symbols: dict):
-    hours = 8
     report = {key: {"start_value": None,
                     "current_value": None,
                     "current_sma": None,
                     "signal": None,
                     "sell_value": None,
-                    "bank_value": value["allocated_bank"]}
+                    "bank_value": value["allocated_bank"]
+                    "assets":value["stock"]}
               for key, value in symbols.items()}
-    local_dt = datetime.now(tz=tz.tzlocal())
-    current_est = local_to_est(local_dt)
+    local_dt, current_est = date_reset()
     trade_start = datetime(current_est.year,
                            current_est.month,
                            current_est.day,
@@ -87,48 +92,55 @@ def trade_routine(symbols: dict):
     trade_end = datetime(current_est.year,
                          current_est.month,
                          current_est.day,
-                         hour=16,
-                         minute=30,
+                         hour=15,
                          tzinfo=timezone('US/Eastern'))
-    while True:
-        if current_est >= trade_start:
-            for i in range(hours*3):
-                for symbol in symbols.keys():
-                    if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
-                        (report[symbol]["start_value"],
-                        report[symbol]["current_value"],
-                        report[symbol]["current_sma"],
-                        report[symbol]["signal"],
-                        report[symbol]["sell_value"],
-                        report[symbol]["bank_value"]) = scalp_operation(symbol=symbol,
-                                                                        bank_value=report[symbol]["bank_value"],
-                                                                        start_stocks=symbols[symbol]["start_stocks"])
-                        print(f"""{report[symbol]} report:
-                                    current value {report[symbol]['current_value']}
-                                    sma: {report[symbol]['current_sma']}
-                                    signal: {report[symbol]['signal']}
-                                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
-                                    total value: {report[symbol]['bank_value']}""")
-                        print("sleeping")
-                    else:
-                        print(f"bank fell below threshold for {symbol}")
-                        print(f"""{report[symbol]} report:
-                                    current value {report[symbol]['current_value']}
-                                    sma: {report[symbol]['current_sma']}
-                                    signal: {report[symbol]['signal']}
-                                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
-                                    total value: {report[symbol]['bank_value']}""")
-                sleep(60*20)  # sleep for 20 minutes
-            return
-        elif current_est >= trade_end:
+    intraday = True
+    while intraday:
+        if current_est > trade_start and current_est < trade_end:
+            for symbol in symbols.keys():
+                if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
+                    (report[symbol]["start_value"],
+                     report[symbol]["current_value"],
+                     report[symbol]["current_sma"],
+                     report[symbol]["signal"],
+                     report[symbol]["sell_value"],
+                     report[symbol]["bank_value"]) = scalp_operation(symbol=symbol,
+                                                                     bank_value=report[symbol]["bank_value"],
+                                                                     stock=symbols[symbol]["stock"])
+                    print(f"""
+                    current est: {current_est}
+                    {symbol} report:
+                    current value {report[symbol]['current_value']}
+                    sma: {report[symbol]['current_sma']}
+                    signal: {report[symbol]['signal']}
+                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                    total value: {report[symbol]['bank_value']}
+                    """)
+                    print("sleeping")
+                else:
+                    print(f"bank fell below threshold for {symbol}")
+                    print(f"""
+                    current est: {current_est}
+                    {symbol} report:
+                    current value {report[symbol]['current_value']}
+                    sma: {report[symbol]['current_sma']}
+                    signal: {report[symbol]['signal']}
+                    value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                    total value: {report[symbol]['bank_value']}
+                    """)
+            sleep(60*20)  # sleep for 20 minutes
+        elif current_est > trade_end:
             print("trade ended for today, moving to day operations")
-            return
-        else:
+            intraday = False
+        elif current_est <= trade_start and current_est > trade_start:
             print(f"sleeping before trade: {(trade_start-current_est).total_seconds()} seconds")
             sleep((trade_start-current_est).total_seconds())
+        local_dt, current_est = date_reset()
+    for symbol in symbols.keys():
+        end_of_day_test(symbol)
 
 
-symbols = {"AAPL": {"allocated_bank": 100, "start_stocks": 10, "stop_thresh": 10},
-           "UBER": {"allocated_bank": 200, "start_stocks": 5, "stop_thresh": 10}
+symbols = {"AAPL": {"allocated_bank": 100, "stock": 10, "stop_thresh": 10},
+           "UBER": {"allocated_bank": 200, "stock": 5, "stop_thresh": 10}
            }
 trade_routine(symbols)

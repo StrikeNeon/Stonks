@@ -29,6 +29,8 @@ def scalp(data: DataFrame,
     current_mav = sma.iloc[-1]
     if current_closing > current_mav:
         signal = 1
+    elif current_closing < current_mav:
+        signal = -1
     else:
         signal = 0
     return signal

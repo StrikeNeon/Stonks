@@ -1,4 +1,6 @@
-def buy_sell_proto(bank_value, current_value, sell_value, start_stocks):
-    bank_value += sell_value * start_stocks
-    bank_value -= current_value * start_stocks
-    return bank_value
+def buy_sell_proto(signal: int, bank_value, current_value, op_value, stocks):
+    if signal == 1:
+        bank_value += op_value * stocks
+    else:
+        bank_value -= op_value * stocks
+    return bank_value, stocks
