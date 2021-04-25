@@ -32,7 +32,7 @@ def scalp_operation(symbol: str = 'AAPL',
                     bank_value: int = 500,
                     stock_u_limit: int = 10,
                     stock_l_limit: int = 1,
-                    stock:int=5,
+                    stock: int = 5,
                     data_index: str = "Adj Close"):
     live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
     sma = compute_sma(live_data, window=20)
@@ -42,15 +42,20 @@ def scalp_operation(symbol: str = 'AAPL',
     signal = scalp(live_data, sma)
     if signal == 0:
         sell_value = None
-        if stock < stock_u_limit:
-            bank_value, stock_operated = buy_sell_proto(bank_value, current_value,
-                                                        sell_value, stock_u_limit//2)
-            stock += stock_operated
     elif signal == 1:
         sell_value = current_value * 1.007
-    if sell_value and stock//2>stock_l_limit:
+    elif signal == -1:
+        if stock < stock_u_limit:
+            bank_value, stock_operated = buy_sell_proto(bank_value, current_value,
+                                                        sell_value, stock_u_limit // 2)
+            stock += stock_operated
+    if sell_value and stock // 2 > stock_l_limit:
+        if stock > stock_u_limit:
+            to_sell = (stock - stock_u_limit) // 2
+        else:
+            to_sell = stock_u_limit//2
         bank_value, stock_operated = buy_sell_proto(bank_value, current_value,
-                                                    sell_value, stock_u_limit//2)
+                                                    sell_value, to_sell)
         stock -= stock_operated
     elif not sell_value:
         if start_value > current_value:
@@ -79,8 +84,8 @@ def trade_routine(symbols: dict):
                     "current_sma": None,
                     "signal": None,
                     "sell_value": None,
-                    "bank_value": value["allocated_bank"]
-                    "assets":value["stock"]}
+                    "bank_value": value["allocated_bank"],
+                    "assets": value["stock"]}
               for key, value in symbols.items()}
     local_dt, current_est = date_reset()
     trade_start = datetime(current_est.year,
@@ -96,7 +101,7 @@ def trade_routine(symbols: dict):
                          tzinfo=timezone('US/Eastern'))
     intraday = True
     while intraday:
-        if current_est > trade_start and current_est < trade_end:
+        if trade_end < current_est > trade_start:
             for symbol in symbols.keys():
                 if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
                     (report[symbol]["start_value"],
@@ -104,7 +109,8 @@ def trade_routine(symbols: dict):
                      report[symbol]["current_sma"],
                      report[symbol]["signal"],
                      report[symbol]["sell_value"],
-                     report[symbol]["bank_value"]) = scalp_operation(symbol=symbol,
+                     report[symbol]["bank_value"],
+                     report[symbol]["assets"]) = scalp_operation(symbol=symbol,
                                                                      bank_value=report[symbol]["bank_value"],
                                                                      stock=symbols[symbol]["stock"])
                     print(f"""
@@ -114,6 +120,7 @@ def trade_routine(symbols: dict):
                     sma: {report[symbol]['current_sma']}
                     signal: {report[symbol]['signal']}
                     value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                    assets left: {report[symbol]['assets']}
                     total value: {report[symbol]['bank_value']}
                     """)
                     print("sleeping")
@@ -126,13 +133,14 @@ def trade_routine(symbols: dict):
                     sma: {report[symbol]['current_sma']}
                     signal: {report[symbol]['signal']}
                     value bought: {report[symbol]['start_value']}, value sold: {report[symbol]['sell_value']}
+                    assets left: {report[symbol]['assets']}
                     total value: {report[symbol]['bank_value']}
                     """)
             sleep(60*20)  # sleep for 20 minutes
         elif current_est > trade_end:
             print("trade ended for today, moving to day operations")
             intraday = False
-        elif current_est <= trade_start and current_est > trade_start:
+        elif trade_end > current_est < trade_start:
             print(f"sleeping before trade: {(trade_start-current_est).total_seconds()} seconds")
             sleep((trade_start-current_est).total_seconds())
         local_dt, current_est = date_reset()
