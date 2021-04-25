@@ -21,3 +21,14 @@ def date_reset():
     local_dt = datetime.now(tz=tz.tzlocal())
     current_est = local_to_est(local_dt)
     return local_dt, current_est
+
+
+def recount_bank(message, bank_value, start_value, current_value, stock):
+    print(message)
+    if start_value > current_value:
+        bank_value -= (start_value
+                       - current_value) * stock
+    elif start_value < current_value:
+        bank_value += (start_value
+                       - current_value) * stock
+    return bank_value
