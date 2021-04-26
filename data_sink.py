@@ -20,7 +20,7 @@ def get_live_data_yahoo(symbol: str, period: str = "1d", interval: str = "5m"):
 
 
 def save_data(data: DataFrame, filename: str):
-    data.to_csv(filename)
+    data.to_csv(f'data/{filename}')
 
 
 def load_from_csv(filename: str, index: str = 'Date'):

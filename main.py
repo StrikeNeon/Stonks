@@ -28,13 +28,13 @@ def history_test():
 
 
 #  TODO cache last closing to check for dupe data
-def scalp_operation(symbol: str = 'AAPL',
+def scalp_operation(live_data,
+                    symbol: str = 'AAPL',
                     bank_value: int = 500,
                     stock_u_limit: int = 10,
                     stock_l_limit: int = 1,
                     stock: int = 5,
                     data_index: str = "Adj Close"):
-    live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
     sma = compute_sma(live_data, window=20)
 
     current_value = live_data[data_index].iloc[-1]
@@ -59,7 +59,7 @@ def scalp_operation(symbol: str = 'AAPL',
             bank_value, stock_operated = buy_sell_proto(1, bank_value,
                                                         current_value,
                                                         sell_value, to_sell)
-        stock -= stock_operated
+            stock -= stock_operated
     elif signal == -1:
         if stock < stock_u_limit:
             bank_value = recount_bank("stocks at upper limit, can't buy",
@@ -86,7 +86,6 @@ def end_of_day_test(symbol: str):
     # plot_sma(aapl_L, window=20, live=True)
 
 
-# live_test()
 def trade_routine(symbols: dict):
     report = {key: {"start_value": None,
                     "current_value": None,
@@ -112,6 +111,7 @@ def trade_routine(symbols: dict):
     while intraday:
         if trade_end > current_est > trade_start:
             for symbol in symbols.keys():
+                live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
                 if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
                     (report[symbol]["start_value"],
                      report[symbol]["current_value"],
@@ -119,7 +119,8 @@ def trade_routine(symbols: dict):
                      report[symbol]["signal"],
                      report[symbol]["sell_value"],
                      report[symbol]["bank_value"],
-                     report[symbol]["assets"]) = scalp_operation(symbol=symbol,
+                     report[symbol]["assets"]) = scalp_operation(live_data,
+                                                                 symbol=symbol,
                                                                  bank_value=report[symbol]["bank_value"],
                                                                  stock=symbols[symbol]["stock"])
                     print(f"""
@@ -160,7 +161,62 @@ def trade_routine(symbols: dict):
         end_of_day_test(symbol)
 
 
+def sim_trade_routine(symbols: dict):
+    report = {key: {"start_value": None,
+                    "current_value": None,
+                    "current_sma": None,
+                    "signal": None,
+                    "sell_value": None,
+                    "bank_value": value["allocated_bank"],
+                    "assets": value["stock"]}
+              for key, value in symbols.items()}
+    data_sets = [get_live_data_yahoo(symbol, period="1d", interval="1m") for symbol in symbols.keys()]
+    start = 0
+    end = 20
+    for i in range(8*3):
+        for symbol in symbols.keys():
+            if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
+                (report[symbol]["start_value"],
+                 report[symbol]["current_value"],
+                 report[symbol]["current_sma"],
+                 report[symbol]["signal"],
+                 report[symbol]["sell_value"],
+                 report[symbol]["bank_value"],
+                 report[symbol]["assets"]) = scalp_operation(data_sets[list(symbols.keys()).index(symbol)][start:end],
+                                                             symbol=symbol,
+                                                             bank_value=report[symbol]["bank_value"],
+                                                             stock=symbols[symbol]["stock"])
+                print(f"""
+                {symbol} report:
+                current value {report[symbol]['current_value']}
+                sma: {report[symbol]['current_sma']}
+                signal: {report[symbol]['signal']}
+                value bought: {report[symbol]['start_value']},
+                value sold: {report[symbol]['sell_value']}
+                assets left: {report[symbol]['assets']}
+                total value: {report[symbol]['bank_value']}
+                """)
+                print("sleeping")
+            else:
+                print(f"bank fell below threshold for {symbol}")
+                print(f"""
+                {symbol} report:
+                current value {report[symbol]['current_value']}
+                sma: {report[symbol]['current_sma']}
+                signal: {report[symbol]['signal']}
+                value bought: {report[symbol]['start_value']},
+                value sold: {report[symbol]['sell_value']}
+                assets left: {report[symbol]['assets']}
+                total value: {report[symbol]['bank_value']}
+                """)
+            sleep(60*20)  # sleep for 20 minutes
+            start += 20
+            end += 20
+    for symbol in symbols.keys():
+        end_of_day_test(symbol)
+
+
 symbols = {"AAPL": {"allocated_bank": 100, "stock": 10, "stop_thresh": 5},
            "UBER": {"allocated_bank": 200, "stock": 5, "stop_thresh": 5}
            }
-trade_routine(symbols)
+sim_trade_routine(symbols)
