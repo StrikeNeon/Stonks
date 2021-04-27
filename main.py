@@ -40,7 +40,7 @@ def scalp_operation(live_data,
     current_value = live_data[data_index].iloc[-1]
     start_value = live_data[data_index].iloc[0]
     signal = scalp(live_data, sma)
-    if signal == 0:
+    if signal == 0 or signal == -1:
         bank_value = recount_bank("hold signal recieved", bank_value,
                                   start_value, current_value, stock)
         sell_value = None
@@ -60,17 +60,10 @@ def scalp_operation(live_data,
                                                         current_value,
                                                         sell_value, to_sell)
             stock -= stock_operated
-    elif signal == -1:
-        if stock < stock_u_limit:
-            bank_value = recount_bank("stocks at upper limit, can't buy",
-                                      bank_value, start_value,
-                                      current_value, stock)
-            sell_value = None
-        else:
-            sell_value = current_value * 1.005
+            buy_value = current_value * 1.005
             bank_value, stock_operated = buy_sell_proto(-1, bank_value,
                                                         current_value,
-                                                        sell_value,
+                                                        buy_value,
                                                         stock_u_limit // 2)
             stock += stock_operated
 
@@ -106,12 +99,16 @@ def trade_routine(symbols: dict):
                          current_est.month,
                          current_est.day,
                          hour=15,
+                         minute=45,
                          tzinfo=timezone('US/Eastern'))
     intraday = True
     while intraday:
         if trade_end > current_est > trade_start:
             for symbol in symbols.keys():
                 live_data = get_live_data_yahoo(symbol, period="20m", interval="1m")
+                current_value = live_data["Adj Close"].iloc[-1]
+                if current_value == report[symbol]["current_value"]:
+                    continue
                 if report[symbol]["bank_value"] > symbols[symbol]["allocated_bank"]-(symbols[symbol]["allocated_bank"]//symbols[symbol]["stop_thresh"]):
                     (report[symbol]["start_value"],
                      report[symbol]["current_value"],
@@ -170,7 +167,7 @@ def sim_trade_routine(symbols: dict):
                     "bank_value": value["allocated_bank"],
                     "assets": value["stock"]}
               for key, value in symbols.items()}
-    data_sets = [get_live_data_yahoo(symbol, period="1d", interval="1m") for symbol in symbols.keys()]
+    data_sets = {symbol: get_live_data_yahoo(symbol, period="1d", interval="1m") for symbol in symbols.keys()}
     start = 0
     end = 20
     for i in range(8*3):
@@ -182,7 +179,7 @@ def sim_trade_routine(symbols: dict):
                  report[symbol]["signal"],
                  report[symbol]["sell_value"],
                  report[symbol]["bank_value"],
-                 report[symbol]["assets"]) = scalp_operation(data_sets[list(symbols.keys()).index(symbol)][start:end],
+                 report[symbol]["assets"]) = scalp_operation(data_sets[symbol][start:end],
                                                              symbol=symbol,
                                                              bank_value=report[symbol]["bank_value"],
                                                              stock=symbols[symbol]["stock"])
@@ -209,14 +206,14 @@ def sim_trade_routine(symbols: dict):
                 assets left: {report[symbol]['assets']}
                 total value: {report[symbol]['bank_value']}
                 """)
-            sleep(60*20)  # sleep for 20 minutes
+        if end + 20 <= len(data_sets[symbol]):
             start += 20
             end += 20
     for symbol in symbols.keys():
         end_of_day_test(symbol)
 
 
-symbols = {"AAPL": {"allocated_bank": 100, "stock": 10, "stop_thresh": 5},
-           "UBER": {"allocated_bank": 200, "stock": 5, "stop_thresh": 5}
+symbols = {"AAPL": {"allocated_bank": 100, "stock": 10, "stop_thresh": 10},
+           "UBER": {"allocated_bank": 200, "stock": 5, "stop_thresh": 10}
            }
 sim_trade_routine(symbols)
