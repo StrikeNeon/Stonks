@@ -28,7 +28,7 @@ def plot_closing(data: DataFrame, title: str,
     plt.ylabel("$ price")
     plt.title(title)
     plt.legend()
-    plt.show()
+    plt.savefig(f'{title}.png')
 
 
 def plot_sma(data: DataFrame, window: int = 50, live: bool = False):
@@ -42,7 +42,7 @@ def plot_sma(data: DataFrame, window: int = 50, live: bool = False):
     plt.title(f"{window} day window" if not live
               else f"{window} minute window")
     plt.legend()
-    plt.show()
+    plt.savefig('sma.png')
 
 
 def plot_SMAC_signals(data: DataFrame,
@@ -59,4 +59,4 @@ def plot_SMAC_signals(data: DataFrame,
               signals.short_mav[signals.positions == 1.0],
               '^', markersize=10, color='m')
 
-    plt.show()
+    plt.savefig('smac_sig.png')
