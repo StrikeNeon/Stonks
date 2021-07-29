@@ -37,14 +37,12 @@ class plotter_engine():
         )
 
         #Show
-        rendered_plot = self.plot.to_image(format="png")
-        return rendered_plot
+        # rendered_plot = self.plot.to_image(format="png")
+        # return rendered_plot
 
     def plot_sma(self, short_rolling, long_rolling, data):
-        short_trace = go.Scatter(x=data['time'], y=short_rolling, mode='lines', name='short rolling')
-        long_trace = go.Scatter(x=data['time'], y=long_rolling, mode='lines', name='long rolling')
-        self.plot.add_trace(short_trace)
-        self.plot.add_trace(long_trace)
+        self.plot.add_trace(go.Scatter(x=data.index, y=short_rolling, mode='lines', name='short rolling'))
+        self.plot.add_trace(go.Scatter(x=data.index, y=long_rolling, mode='lines', name='long rolling'))
 
     def show_plot(self):
         self.plot.show()
