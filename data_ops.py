@@ -8,13 +8,15 @@ import yfinance as yf
 
 def download_symbol():
     # Get Bitcoin data
-    data = yf.download(tickers='BTC-USD', period='2h', interval='15m')
+    data = yf.download(tickers='BTC-USD', period='2h', interval='1m')
     return data
 
 
 def get_sma(data):
-    short_rolling = data.rolling(window=15).mean()
-    long_rolling = data.rolling(window=60).mean()
+    short_rolling = data.rolling(window=20).mean()
+    long_rolling = data.rolling(window=40).mean()
+    short_rolling.fillna(0, inplace=True), long_rolling.fillna(0, inplace=True)
+    print(long_rolling)
     return short_rolling, long_rolling
 
 

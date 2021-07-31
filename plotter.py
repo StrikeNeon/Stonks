@@ -41,8 +41,8 @@ class plotter_engine():
         # return rendered_plot
 
     def plot_sma(self, short_rolling, long_rolling, data):
-        self.plot.add_trace(go.Scatter(x=data.index, y=short_rolling, mode='lines', name='short rolling'))
-        self.plot.add_trace(go.Scatter(x=data.index, y=long_rolling, mode='lines', name='long rolling'))
+        self.plot.add_trace(go.Scatter(x=short_rolling.index, y=short_rolling, mode='lines', name='short rolling'))
+        self.plot.add_trace(go.Scatter(x=long_rolling.index, y=long_rolling, mode='lines', name='long rolling'))
 
     def show_plot(self):
         self.plot.show()
