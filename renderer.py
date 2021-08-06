@@ -1,82 +1,88 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import plotly.graph_objs as go
+from plotly.tools import make_subplots
 from dash.dependencies import Input, Output
+from data_ops import technical_indicators
 
-app = dash.Dash(__name__)
+# pip install pyorbital
+from temp_main import binance_client
 
-app.layout = html.Div([
-    html.P("Render Option:"),
-    dcc.RadioItems(
-        id='render-option',
-        options=[{'value': x, 'label': x} 
-                 for x in ['interactive', 'image']],
-        value='image'
-    ),
-    html.Div(id='output'),
-])
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-@app.callback(
-    Output("output", "children"), 
-    [Input('render-option', 'value')])
-def display_graph(render_option):
-    if render_option == 'image':
-        img_bytes = fig.to_image(format="png")
-        encoding = b64encode(img_bytes).decode()
-        img_b64 = "data:image/png;base64," + encoding
-        return html.Img(src=img_b64, style={'width': '100%'})
-    else:
-        return dcc.Graph(figure=fig)
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app.layout = html.Div(
+    html.Div([
+        html.H4('BTC live recount'),
+        html.Div(id='live-update-text'),
+        dcc.Graph(id='live-update-graph'),
+        dcc.Interval(
+            id='interval-component',
+            interval=(60*60)*1000, # in milliseconds, 60 minutes per interval
+            n_intervals=0
+        )
+    ])
+)
 
-app.run_server(debug=True)
+@app.callback(Output('live-update-text', 'children'),
+              Input('interval-component', 'n_intervals'))
+def update_metrics(n):
+    ticker = binance_client.get_data_tick('BNBBTC')
+    style = {'padding': '5px', 'fontSize': '16px'}
+    return [
+        html.Span(f'open: {ticker["open"][0]}', style=style),
+        html.Span(f'high: {ticker["high"][0]}', style=style),
+        html.Span(f'low: {ticker["low"][0]}', style=style),
+        html.Span(f'close: {ticker["close"][0]}', style=style)
+    ]
 
 
-# import dash
-# from dash.dependencies import Output, Input
-# import dash_core_components as dcc
-# import dash_html_components as html
-# import plotly
-# import random
-# import plotly.graph_objs as go
-# from collections import deque
-  
-# X = deque(maxlen = 20)
-# X.append(1)
-  
-# Y = deque(maxlen = 20)
-# Y.append(1)
-  
-# app = dash.Dash(__name__)
-  
-# app.layout = html.Div(
-#     [
-#         dcc.Graph(id = 'live-graph', animate = True),
-#         dcc.Interval(
-#             id = 'graph-update',
-#             interval = 1000,
-#             n_intervals = 0
-#         ),
-#     ]
-# )
-  
-# @app.callback(
-#     Output('live-graph', 'figure'),
-#     [ Input('graph-update', 'n_intervals') ]
-# )
-  
-# def update_graph_scatter(n):
-#     X.append(X[-1]+1)
-#     Y.append(Y[-1]+Y[-1] * random.uniform(-0.1,0.1))
-  
-#     data = plotly.graph_objs.Scatter(
-#             x=list(X),
-#             y=list(Y),
-#             name='Scatter',
-#             mode= 'lines+markers'
-#     )
-  
-#     return {'data': [data],
-#             'layout' : go.Layout(xaxis=dict(range=[min(X),max(X)]),yaxis = dict(range = [min(Y),max(Y)]),)}
-  
-# if __name__ == '__main__':
-#     app.run_server()
+# Multiple components can update everytime interval gets fired.
+@app.callback(Output('live-update-graph', 'figure'),
+              Input('interval-component', 'n_intervals'))
+def update_graph_live(n):
+    initial_data = binance_client.get_current_data('BNBBTC')
+
+    s_sma, l_sma = technical_indicators.get_sma(initial_data)
+    ema = technical_indicators.get_ema(initial_data)
+    rsi = technical_indicators.get_rsi(initial_data, periods=15)
+
+    fig = make_subplots(rows=1, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
+    #Candlestick
+    fig.append_trace(go.Candlestick(x=initial_data.index,
+                    open=initial_data['open'],
+                    high=initial_data['high'],
+                    low=initial_data['low'],
+                    close=initial_data['close'], name='market data'), row=1, col=1)
+
+    # Add titles
+    fig.update_layout(
+        title='Bitcoin live share price evolution',
+        yaxis_title='Bitcoin Price (kUS Dollars)')
+
+    # X-Axes
+    fig.update_xaxes(
+        rangeslider_visible=True,
+        rangeselector=dict(
+            buttons=list([
+                dict(count=15, label="15m", step="minute", stepmode="backward"),
+                dict(count=45, label="45m", step="minute", stepmode="backward"),
+                dict(count=1, label="HTD", step="hour", stepmode="todate"),
+                dict(count=6, label="6h", step="hour", stepmode="backward"),
+                dict(step="all")
+            ])
+        )
+    )
+
+    fig.append_trace(go.Scatter(x=initial_data.index, y=s_sma, mode='lines', name='short sma'), row=1, col=1)
+    fig.append_trace(go.Scatter(x=initial_data.index, y=l_sma, mode='lines', name='long sma'), row=1, col=1)
+    fig.append_trace(go.Scatter(x=initial_data.index, y=ema, mode='lines', name='ema'), row=1, col=1)
+
+    fig.append_trace(go.Scatter(x=initial_data.index, y=rsi, mode='lines', name='rsi'), row=1, col=2)
+
+    return fig
+
+
+if __name__ == '__main__':
+    app.run_server(debug=True)

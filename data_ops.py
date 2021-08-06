@@ -24,6 +24,19 @@ class binance_api():
         dataframe = pd.DataFrame(data)
         return dataframe
 
+    def get_data_tick(self, symbol):
+        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1)
+        data = [{"open": record[1],
+                 "high": record[2],
+                 "low": record[3],
+                 "close": record[4],
+                 "volume": record[5],
+                 "trades": record[7],
+                 "taker_buy_base": record[8],
+                 "taker_buy_quote": record[9]} for record in raw_data]
+        dataframe = pd.DataFrame(data)
+        return dataframe
+
     def get_last_day(self, symbol):
         raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1HOUR, limit=24)
         data = [{"open": record[1],
@@ -49,6 +62,10 @@ class binance_api():
                  "taker_buy_quote": record[9]} for record in raw_data]
         dataframe = pd.DataFrame(data)
         return dataframe
+
+    def add_data_tick(self, base_dataframe, data_tick):
+        base_dataframe = base_dataframe.append(data_tick, ignore_index=True)
+        return base_dataframe
 
 
 class technical_indicators():
