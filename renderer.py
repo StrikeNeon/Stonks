@@ -18,7 +18,7 @@ app.layout = html.Div(
         html.Div(id='live-update-text'),
         dcc.Graph(id='live-update-graph'),
         dcc.Interval(
-            id='interval-component',
+            id='interval-btc',
             interval=(60*60)*1000, # in milliseconds, 60 minutes per interval
             n_intervals=0
         )
@@ -26,7 +26,7 @@ app.layout = html.Div(
 )
 
 @app.callback(Output('live-update-text', 'children'),
-              Input('interval-component', 'n_intervals'))
+              Input('interval-btc', 'n_intervals'))
 def update_metrics(n):
     ticker = binance_client.get_data_tick('BNBBTC')
     style = {'padding': '5px', 'fontSize': '16px'}
@@ -40,7 +40,7 @@ def update_metrics(n):
 
 # Multiple components can update everytime interval gets fired.
 @app.callback(Output('live-update-graph', 'figure'),
-              Input('interval-component', 'n_intervals'))
+              Input('interval-btc', 'n_intervals'))
 def update_graph_live(n):
     initial_data = binance_client.get_current_data('BNBBTC')
 
