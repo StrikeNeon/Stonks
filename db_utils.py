@@ -13,11 +13,17 @@ class MongoManager():
 
         self.db_logger = loguru.logger
 
-    def setup_symbol(self, symbol: str, start_data: list):
+    def setup_symbol(self, symbol: str, start_data: dict):
+        added_symbol = self.room_collection.insert_one({"symbol_name": symbol,
+                                                        "candlestick_data": start_data,
+                                                        "sma_data": [],
+                                                        "ema_data": [],
+                                                        "rsi_data": []
+                                                        }).inserted_id
+        self.db_logger.info(f"added new symbol record for {symbol} at {added_symbol}")
+        return added_symbol
 
-        pass
-
-    def add_symbol_tick(self, symbol:str, data_tick: list):
+    def add_symbol_tick(self, symbol: str, data_tick: dict):
 
         pass
 
