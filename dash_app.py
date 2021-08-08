@@ -1,3 +1,4 @@
+from pd import DataFrame
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -29,6 +30,7 @@ app.layout = html.Div(
               Input('interval-btc', 'n_intervals'))
 def update_metrics(n):
     ticker = binance_client.get_data_tick('BNBBTC')
+    ticker = DataFrame(ticker)
     style = {'padding': '5px', 'fontSize': '16px'}
     return [
         html.Span(f'open: {ticker["open"][0]}', style=style),
@@ -43,6 +45,7 @@ def update_metrics(n):
               Input('interval-btc', 'n_intervals'))
 def update_graph_live(n):
     initial_data = binance_client.get_current_data('BNBBTC')
+    initial_data = DataFrame(initial_data)
 
     s_sma, l_sma = technical_indicators.get_sma(initial_data)
     ema = technical_indicators.get_ema(initial_data)
