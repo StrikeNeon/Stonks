@@ -38,8 +38,13 @@ async def add_client(new_client: client_model):
 @app.get("/activate_client")
 async def activate_client(client: str):
     # TODO login with token here
-    db_manager.add_client(client)
-    return {"message": f"{client} activated"}
+    result = db_manager.add_client(client)
+    if result == 200:
+        return Response(status_code=200)
+    raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="no client under that username was found"
+        )
 
 @app.get("/start_gathering_symbol")
 async def start_gathering_symbol(client: str, symbol: str):
@@ -49,14 +54,16 @@ async def start_gathering_symbol(client: str, symbol: str):
 async def stop_gathering_symbol(client: str, symbol: str):
     return {"message": f"{symbol} gathering stopped"}
 
-@app.get("/get_hourly_report")
-async def get_hourly_report(symbol: str):
-    return {"message": f"{symbol} hourly report"}
-
 @app.get("/init_symbol")
 async def init_symbol(symbol: str, client: str):
-    db_manager.setup_symbol(symbol, client)
-    return {"message": f"{symbol} initiated"}
+    init_symbol = db_manager.setup_symbol(symbol, client)
+    if init_symbol == 200:
+        return Response(status_code=200)
+    if init_symbol == 403:
+        raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="client isn't activated"
+            )
 
 @app.get("/get_current_data")
 async def get_current_data(symbol: str):
@@ -75,26 +82,6 @@ async def get_current_ema(symbol: str):
 
 @app.get("/get_current_rsi")
 async def get_current_rsi(symbol: str):
-    return {"message": f"{symbol} rsi"}
-
-
-@app.get("/get_full_data")
-async def get_full_data(symbol: str):
-    return {"message": f"{symbol} data"}
-
-
-@app.get("/get_full_sma")
-async def get_full_sma(symbol: str):
-    return {"message": f"{symbol} sma"}
-
-
-@app.get("/get_full_ema")
-async def get_full_ema(symbol: str):
-    return {"message": f"{symbol} ema"}
-
-
-@app.get("/get_full_rsi")
-async def get_full_rsi(symbol: str):
     return {"message": f"{symbol} rsi"}
 
 

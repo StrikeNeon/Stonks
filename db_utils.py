@@ -79,7 +79,7 @@ class MongoManager():
             # (you need to encode those values before you send them,
             #  you get public keys from a speciffic rest endpoint, decoding with local private key happens here)
             self.active_clients[client] = binance_client
-            return self.active_clients[client]
+            return 200
         else:
             return 404
 
@@ -93,7 +93,7 @@ class MongoManager():
                                                             "rsi_data": []
                                                             }).inserted_id
             self.db_logger.info(f"added new symbol record for {symbol} at {added_symbol}")
-            return added_symbol
+            return 200
         else:
             return 403
 
