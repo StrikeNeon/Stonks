@@ -6,7 +6,6 @@ from plotly.tools import make_subplots
 from dash.dependencies import Input, Output
 from data_ops import technical_indicators
 
-# pip install pyorbital
 from temp_main import binance_client
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
