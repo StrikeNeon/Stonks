@@ -6,6 +6,7 @@ from passlib.exc import UnknownHashError
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import timedelta, datetime
+from time import sleep
 from settings import ALGORITHM, SECRET_KEY
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -45,25 +46,27 @@ class MongoManager():
             403
         return user
 
-    def create_access_token(self, data: dict, expires_delta: timedelta = 30):
+    def create_access_token(self, data: dict, expires_delta: timedelta = 24):
         to_encode = data.copy()
         if expires_delta:
             expire = datetime.utcnow() + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=15)
+            expire = datetime.utcnow() + timedelta(hours=12)
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
-    def register_client(self, client_data):
+    def register_client(self, client_data: dict):
         user_check = self.user_collection.find_one({"username": client_data.get("username")})
         if not user_check:
             # TODO encrypt keys and secrets, keep encryption keys local
+            # (you need to encode those values before you send them,
+            #  you get public keys from a speciffic rest endpoint)
             added = self.user_collection.insert_one({"username": client_data.get("username"),
                                                      "password": self.get_password_hash(client_data.get("password")),
                                                      "api_key": client_data.get("api_key"),
                                                      "api_secret": client_data.get("api_secret"),
-                                                     "bank_data": {}})
+                                                     "bank_data": {}}).inserted_id
             return added
         else:
             return None
@@ -73,6 +76,8 @@ class MongoManager():
         if queried_client:
             binance_client = binance_api(queried_client.get("api_key"), queried_client.get("api_secret"))
             # TODO encrypt keys and secrets, keep encryption keys local
+            # (you need to encode those values before you send them,
+            #  you get public keys from a speciffic rest endpoint, decoding with local private key happens here)
             self.active_clients[client] = binance_client
             return self.active_clients[client]
         else:
@@ -144,9 +149,12 @@ class MongoManager():
                                                              {"$set": {"rsi_data": rsi.tolist()}})
             return current_rsi.get("rsi_data")
 
-    def gather_data(self, symbol:str, client: str):
-
-        pass
+    def gather_data(self, symbol: str, client: str, minute_interval: int):
+        current_data = self.symbols_collection.find_one({"symbol_name": symbol})
+        if current_data:
+            while True:
+                sleep(minute_interval*60)
+                yield self.add_symbol_tick(symbol, client)
 
     def record_last_day(self, symbol: str, last_day_data: list):
 

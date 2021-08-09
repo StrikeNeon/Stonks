@@ -1,5 +1,8 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import (FastAPI, HTTPException,
+                     Depends, status,
+                     Response, WebSocket,
+                     Request)
 from pydantic import BaseModel
 from db_utils import MongoManager
 
@@ -17,25 +20,43 @@ class symbol_model(BaseModel):
 
 class client_model(BaseModel):
     username: str
-    password: dict
-    api_key: dict
-    api_secret: dict
+    password: str
+    api_key: str
+    api_secret: str
 
 
 @app.post("/add_client")
-async def add_cleint(new_client: client_model):
-    return {"message": f"{new_client['username']} added"}
+async def add_client(new_client: client_model):
+    added_client = db_manager.register_client(dict(new_client))
+    if added_client:
+        return {"message": f"{new_client.username} added under id {added_client}"}
+    raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="already registered"
+        )
 
+@app.get("/activate_client")
+async def activate_client(client: str):
+    # TODO login with token here
+    db_manager.add_client(client)
+    return {"message": f"{client} activated"}
+
+@app.get("/start_gathering_symbol")
+async def start_gathering_symbol(client: str, symbol: str):
+    return {"message": f"{symbol} gathering started"}
 
 @app.get("/stop_gathering_symbol")
-async def stop_gathering_symbol(symbol: str):
+async def stop_gathering_symbol(client: str, symbol: str):
     return {"message": f"{symbol} gathering stopped"}
-
 
 @app.get("/get_hourly_report")
 async def get_hourly_report(symbol: str):
     return {"message": f"{symbol} hourly report"}
 
+@app.get("/init_symbol")
+async def init_symbol(symbol: str, client: str):
+    db_manager.setup_symbol(symbol, client)
+    return {"message": f"{symbol} initiated"}
 
 @app.get("/get_current_data")
 async def get_current_data(symbol: str):
