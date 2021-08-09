@@ -1,8 +1,10 @@
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
+from db_utils import MongoManager
 
 app = FastAPI()
+db_manager = MongoManager()
 
 
 class symbol_model(BaseModel):
@@ -13,9 +15,16 @@ class symbol_model(BaseModel):
     rsi_data: dict
 
 
-@app.get("/start_gathering_symbol")
-async def start_gathering_symbol(symbol: str):
-    return {"message": f"{symbol} gathering started"}
+class client_model(BaseModel):
+    username: str
+    password: dict
+    api_key: dict
+    api_secret: dict
+
+
+@app.post("/add_client")
+async def add_cleint(new_client: client_model):
+    return {"message": f"{new_client['username']} added"}
 
 
 @app.get("/stop_gathering_symbol")
