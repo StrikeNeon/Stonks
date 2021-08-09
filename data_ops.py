@@ -9,6 +9,11 @@ class binance_api():
     def __init__(self, api_key, api_secret):
         self.client = Client(api_key, api_secret)
 
+    def get_all_symbols(self):
+        exchange_info = self.client.get_exchange_info()
+        symbols = [symbol['symbol'] for symbol in exchange_info['symbols']]
+        return symbols
+
     def get_current_data(self, symbol):
         raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=60)
         data = [{"open": record[1],

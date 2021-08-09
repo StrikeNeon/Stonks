@@ -28,7 +28,7 @@ app.layout = html.Div(
 @app.callback(Output('live-update-text', 'children'),
               Input('interval-btc', 'n_intervals'))
 def update_metrics(n):
-    ticker = binance_client.get_data_tick('BNBBTC')
+    ticker = binance_client.get_data_tick('BTCUSDT')
     style = {'padding': '5px', 'fontSize': '16px'}
     return [
         html.Span(f'open: {ticker["open"][0]}', style=style),
@@ -42,7 +42,7 @@ def update_metrics(n):
 @app.callback(Output('live-update-graph', 'figure'),
               Input('interval-btc', 'n_intervals'))
 def update_graph_live(n):
-    initial_data = binance_client.get_current_data('BNBBTC')
+    initial_data = binance_client.get_current_data('BTCUSDT')
 
     s_sma, l_sma = technical_indicators.get_sma(initial_data)
     ema = technical_indicators.get_ema(initial_data)
@@ -58,8 +58,8 @@ def update_graph_live(n):
 
     # Add titles
     fig.update_layout(
-        title='Bitcoin live share price evolution',
-        yaxis_title='Bitcoin Price (kUS Dollars)')
+        title='ETH to BTC pair price evolution',
+        yaxis_title='ETHBTC share data')
 
     # X-Axes
     fig.update_xaxes(
