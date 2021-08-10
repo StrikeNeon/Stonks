@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from datetime import timedelta, datetime
 from time import sleep
 from settings import ALGORITHM, SECRET_KEY
+import schedule
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -101,6 +102,7 @@ class MongoManager():
 
     def setup_symbol(self, symbol: str, client: str):
         if client in self.active_clients.keys():
+            self.symbols_collection.find_one_and_delete({"symbol_name": symbol})
             start_data = self.active_clients.get(client).get_current_data(symbol)
             added_symbol = self.symbols_collection.insert_one({"symbol_name": symbol,
                                                             "candlestick_data": start_data,
@@ -168,9 +170,11 @@ class MongoManager():
     def gather_data(self, symbol: str, client: str, minute_interval: int):
         current_data = self.symbols_collection.find_one({"symbol_name": symbol})
         if current_data:
+            schedule.every(24).hours.do(self.setup_symbol(symbol, client))
+            schedule.every(minute_interval).minutes.do(self.add_symbol_tick(symbol, client))
             while True:
+                schedule.run_pending()
                 sleep(minute_interval*60)
-                yield self.add_symbol_tick(symbol, client)
 
     def record_last_day(self, symbol: str, last_day_data: list):
 
