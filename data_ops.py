@@ -24,8 +24,7 @@ class binance_api():
                  "trades": record[7],
                  "taker_buy_base": record[8],
                  "taker_buy_quote": record[9]} for record in raw_data]
-        dataframe = pd.DataFrame(data)
-        return dataframe
+        return data
 
     def get_data_tick(self, symbol):
         raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1)

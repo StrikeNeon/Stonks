@@ -1,7 +1,10 @@
 from pandas import DataFrame
 from pymongo import MongoClient, ReturnDocument
 import loguru
+from pydantic import BaseModel
+from typing import Optional
 from data_ops import technical_indicators, binance_api
+from fastapi.security import OAuth2PasswordBearer
 from passlib.exc import UnknownHashError
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -10,6 +13,16 @@ from time import sleep
 from settings import ALGORITHM, SECRET_KEY
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+
+class token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class token_data(BaseModel):
+    username: Optional[str] = None
 
 
 class MongoManager():
@@ -23,10 +36,10 @@ class MongoManager():
 
         self.db_logger = loguru.logger
 
-    def get_password_hash(self, password):
+    def get_password_hash(self, password: str):
         return pwd_context.hash(password)
 
-    def verify_password(self, plain_password, hashed_password):
+    def verify_password(self, plain_password: str, hashed_password: str):
         try:
             verification = pwd_context.verify(plain_password, hashed_password)
             return verification
@@ -71,22 +84,25 @@ class MongoManager():
         else:
             return None
 
-    def add_client(self, client: str):
-        queried_client = self.user_collection.find_one({"client_name": client})
+    def add_client(self, client: str, password: str):
+        queried_client = self.user_collection.find_one({"username": client})
         if queried_client:
-            binance_client = binance_api(queried_client.get("api_key"), queried_client.get("api_secret"))
-            # TODO encrypt keys and secrets, keep encryption keys local
-            # (you need to encode those values before you send them,
-            #  you get public keys from a speciffic rest endpoint, decoding with local private key happens here)
-            self.active_clients[client] = binance_client
-            return 200
+            if self.verify_password(password, queried_client.get("password")) != 403:
+                binance_client = binance_api(queried_client.get("api_key"), queried_client.get("api_secret"))
+                # TODO encrypt keys and secrets, keep encryption keys local
+                # (you need to encode those values before you send them,
+                #  you get public keys from a speciffic rest endpoint, decoding with local private key happens here)
+                self.active_clients[client] = binance_client
+                return 200
+            else:
+                return 403
         else:
             return 404
 
     def setup_symbol(self, symbol: str, client: str):
         if client in self.active_clients.keys():
             start_data = self.active_clients.get(client).get_current_data(symbol)
-            added_symbol = self.room_collection.insert_one({"symbol_name": symbol,
+            added_symbol = self.symbols_collection.insert_one({"symbol_name": symbol,
                                                             "candlestick_data": start_data,
                                                             "sma_data": {},
                                                             "ema_data": [],
@@ -114,7 +130,7 @@ class MongoManager():
                 candlestick_data = current_data.get("candlestick_data")
                 data_tick = self.active_clients.get(client).get_data_tick(symbol)
                 candlestick_data = [{key: value.extend(data_tick[0].get(key)) for key, value in current_candlestick.items()} for current_candlestick in candlestick_data]
-            updated_data = self.symbols_collection.update_one({"symbol_name": symbol}, {"$set": {"candlestick_data": current_candlestick}})
+            updated_data = self.symbols_collection.find_one_and_update({"symbol_name": symbol}, {"$set": {"candlestick_data": current_candlestick}}, return_document=ReturnDocument.AFTER)
             return updated_data.get("candlestick_data")
         return 403
 
@@ -124,9 +140,9 @@ class MongoManager():
             return 404
         else:
             short_rolling, long_rolling = technical_indicators.get_sma(DataFrame(current_data.get("candlestick_data")))
-            current_sma = self.symbols_collection.update_one({"symbol_name": symbol},
+            current_sma = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"sma_data": {"short_rolling": short_rolling.tolist(),
-                                                                                    "long_rolling": long_rolling.tolist()}}})
+                                                                                    "long_rolling": long_rolling.tolist()}}}, return_document=ReturnDocument.AFTER)
             return current_sma.get("sma_data")
 
     def recount_ema(self, symbol: str):
@@ -135,18 +151,18 @@ class MongoManager():
             return 404
         else:
             ema = technical_indicators.get_ema(DataFrame(current_data.get("candlestick_data")))
-            current_ema = self.symbols_collection.update_one({"symbol_name": symbol},
-                                                             {"$set": {"ema_data": ema.tolist()}})
+            current_ema = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
+                                                             {"$set": {"ema_data": ema.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_ema.get("ema_data")
 
-    def recount_rsi(self, symbol: str, rsi: list):
+    def recount_rsi(self, symbol: str):
         current_data = self.symbols_collection.find_one({"symbol_name": symbol})
         if not current_data:
             return 404
         else:
             rsi = technical_indicators.get_rsi(DataFrame(current_data.get("candlestick_data")))
-            current_rsi = self.symbols_collection.update_one({"symbol_name": symbol},
-                                                             {"$set": {"rsi_data": rsi.tolist()}})
+            current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
+                                                             {"$set": {"rsi_data": rsi.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("rsi_data")
 
     def gather_data(self, symbol: str, client: str, minute_interval: int):
