@@ -6,6 +6,7 @@ from fastapi import (FastAPI, HTTPException,
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
 from db_utils import MongoManager
+from background_tasks import data_gathering_task, stop_data_gathering
 
 app = FastAPI()
 db_manager = MongoManager()
@@ -28,6 +29,7 @@ async def add_client(new_client: client_model):
             detail="already registered"
         )
 
+
 @app.get("/activate_client", response_class=ORJSONResponse)
 async def activate_client(client: str, password: str):
     # TODO login with token here
@@ -45,13 +47,18 @@ async def activate_client(client: str, password: str):
             detail="login or password incorrect"
         )
 
+
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
-async def start_gathering_symbol(client: str, symbol: str):
-    return {"message": f"{symbol} gathering started"}
+async def start_gathering_symbol(client: str, symbol: str, minute_interval: int):
+    gather_task = data_gathering_task.delay(client, symbol, minute_interval)
+    return {"message": f"{symbol} gathering started", "task_id": gather_task.id}
+
 
 @app.get("/stop_gathering_symbol", response_class=ORJSONResponse)
-async def stop_gathering_symbol(client: str, symbol: str):
-    return {"message": f"{symbol} gathering stopped"}
+async def stop_gathering_symbol(task_id: str):
+    stop_data_gathering(task_id)
+    return {"message": f"{task_id} gathering stopped"}
+
 
 @app.get("/init_symbol", response_class=ORJSONResponse)
 async def init_symbol(symbol: str, client: str):
@@ -64,6 +71,7 @@ async def init_symbol(symbol: str, client: str):
                 detail="client isn't activated"
             )
 
+
 @app.get("/get_current_data", response_class=ORJSONResponse)
 async def get_current_data(symbol: str):
     current_candlestick = db_manager.get_current_data(symbol)
@@ -74,7 +82,6 @@ async def get_current_data(symbol: str):
         )
     else:
         return {"message": f"{symbol} found", "data": current_candlestick}
-    
 
 
 @app.get("/get_current_sma", response_class=ORJSONResponse)

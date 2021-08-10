@@ -9,9 +9,8 @@ from passlib.exc import UnknownHashError
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import timedelta, datetime
-from time import sleep
 from settings import ALGORITHM, SECRET_KEY
-import schedule
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -166,15 +165,6 @@ class MongoManager():
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"rsi_data": rsi.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("rsi_data")
-
-    def gather_data(self, symbol: str, client: str, minute_interval: int):
-        current_data = self.symbols_collection.find_one({"symbol_name": symbol})
-        if current_data:
-            schedule.every(24).hours.do(self.setup_symbol(symbol, client))
-            schedule.every(minute_interval).minutes.do(self.add_symbol_tick(symbol, client))
-            while True:
-                schedule.run_pending()
-                sleep(minute_interval*60)
 
     def record_last_day(self, symbol: str, last_day_data: list):
 
