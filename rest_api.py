@@ -112,6 +112,20 @@ async def get_current_rsi(symbol: str):
         return {"message": f"{symbol} rsi recounted", "data": current_rsi}
 
 
+@app.get("/compute_sma_scalp", response_class=ORJSONResponse)
+async def compute_sma_scalp(symbol: str):
+    current_signal = db_manager.get_scalp_signal(symbol)
+    if current_signal == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    elif current_signal == 1:
+        return {"message": f"sell {symbol}"}
+    elif current_signal == 0:
+        return {"message": f"hold {symbol}"}
+
+
 if __name__ == "__main__":
     uvicorn.run("rest_api:app", host="127.0.0.1",
                 port=8080, reload=True,

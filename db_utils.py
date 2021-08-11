@@ -166,10 +166,23 @@ class MongoManager():
                                                              {"$set": {"rsi_data": rsi.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("rsi_data")
 
-    def record_last_day(self, symbol: str, last_day_data: list):
+    def recount_last_day(self, symbol: str):
 
         pass
 
-    def recount_last_week(self, symbol: str, last_week_data: list):
+    def recount_last_week(self, symbol: str):
 
         pass
+
+    def get_scalp_signal(self, symbol: str):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            sma_data = self.recount_sma(symbol).get("short_rolling")
+            last_data, last_sma_data = float(current_data[-1].get("close")), sma_data[-1]
+            if last_sma_data < last_data:
+                return 1
+            else:
+                return 0
+            print(f"{last_data}, {last_sma_data}")
