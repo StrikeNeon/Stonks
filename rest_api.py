@@ -49,8 +49,8 @@ async def activate_client(client: str, password: str):
 
 
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
-async def start_gathering_symbol(client: str, symbol: str, minute_interval: int):
-    gather_task = data_gathering_task.delay(client, symbol, minute_interval)
+async def start_gathering_symbol(symbol: str, client: str, password: str, minute_interval: int):
+    gather_task = data_gathering_task.delay(symbol, client, password, minute_interval)
     return {"message": f"{symbol} gathering started", "task_id": gather_task.id}
 
 

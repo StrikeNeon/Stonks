@@ -130,8 +130,8 @@ class MongoManager():
             else:
                 candlestick_data = current_data.get("candlestick_data")
                 data_tick = self.active_clients.get(client).get_data_tick(symbol)
-                candlestick_data = [{key: value.extend(data_tick[0].get(key)) for key, value in current_candlestick.items()} for current_candlestick in candlestick_data]
-            updated_data = self.symbols_collection.find_one_and_update({"symbol_name": symbol}, {"$set": {"candlestick_data": current_candlestick}}, return_document=ReturnDocument.AFTER)
+                candlestick_data = candlestick_data.extend(data_tick)
+            updated_data = self.symbols_collection.find_one_and_update({"symbol_name": symbol}, {"$set": {"candlestick_data": candlestick_data}}, return_document=ReturnDocument.AFTER)
             return updated_data.get("candlestick_data")
         return 403
 
