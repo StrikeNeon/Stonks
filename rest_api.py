@@ -50,6 +50,10 @@ async def activate_client(client: str, password: str):
 
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
 async def start_gathering_symbol(symbol: str, client: str, password: str, minute_interval: int):
+    # TODO login with token here?
+    # This is a crutch, client activation (db_manager.add_client) should be a separate endpoint
+    # and this should verify token, but celery doesn't detect changes in active clients
+    # though binance care about ips and not connections
     gather_task = data_gathering_task.delay(symbol, client, password, minute_interval)
     return {"message": f"{symbol} gathering started", "task_id": gather_task.id}
 
@@ -58,18 +62,6 @@ async def start_gathering_symbol(symbol: str, client: str, password: str, minute
 async def stop_gathering_symbol(task_id: str):
     stop_data_gathering(task_id)
     return {"message": f"{task_id} gathering stopped"}
-
-
-@app.get("/init_symbol", response_class=ORJSONResponse)
-async def init_symbol(symbol: str, client: str):
-    init_symbol = db_manager.setup_symbol(symbol, client)
-    if init_symbol == 200:
-        return Response(status_code=200)
-    if init_symbol == 403:
-        raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="client isn't activated"
-            )
 
 
 @app.get("/get_current_data", response_class=ORJSONResponse)
