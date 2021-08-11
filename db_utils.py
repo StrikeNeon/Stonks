@@ -129,8 +129,10 @@ class MongoManager():
                 return 404
             else:
                 candlestick_data = current_data.get("candlestick_data")
+                self.db_logger.debug(candlestick_data)
                 data_tick = self.active_clients.get(client).get_data_tick(symbol)
-                candlestick_data = candlestick_data.extend(data_tick)
+                self.db_logger.debug(len(data_tick))
+                candlestick_data.extend(data_tick)
             updated_data = self.symbols_collection.find_one_and_update({"symbol_name": symbol}, {"$set": {"candlestick_data": candlestick_data}}, return_document=ReturnDocument.AFTER)
             return updated_data.get("candlestick_data")
         return 403

@@ -25,7 +25,6 @@ celery_log = get_task_logger(__name__)
 @celery.task()
 def data_gathering_task(symbol: str, client: str, password: str, minute_interval: int):
     db_manager.add_client(client, password)
-    celery_log.info(db_manager.active_clients)
     if db_manager.get_current_data(symbol) == 404:
         db_manager.setup_symbol(symbol, client)
         celery_log.info(f"{symbol} has been set up")
