@@ -102,9 +102,6 @@ class binance_banker(binance_api):
         pass
 
 
-
-
-
 class technical_indicators():
 
     def get_sma(self, data):
