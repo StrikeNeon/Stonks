@@ -26,7 +26,7 @@ app.layout = html.Div(
 @app.callback(Output('live-update-text', 'children'),
               Input('interval-btc', 'n_intervals'))
 def update_metrics(n):
-    request = requests.get("http://127.0.0.1:8080/get_current_data?symbol=BTCUSDT")
+    request = requests.get("http://127.0.0.1:8080/get_current_data?symbol=BTCRUB")
     if request.status_code == 200:
         data = request.json()
         style = {'padding': '5px', 'fontSize': '16px'}
@@ -48,12 +48,12 @@ def update_metrics(n):
               Input('interval-btc', 'n_intervals'))
 def update_graph_live(n):
 
-    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8080/get_current_data?symbol=BTCUSDT").get("data"))
-    sma_data = request_data("http://127.0.0.1:8080/get_current_sma?symbol=BTCUSDT").get("data")
+    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8080/get_current_data?symbol=BTCRUB").get("data"))
+    sma_data = request_data("http://127.0.0.1:8080/get_current_sma?symbol=BTCRUB").get("data")
     l_sma = sma_data.get("long_rolling")
     s_sma = sma_data.get("short_rolling")
-    ema_data = request_data("http://127.0.0.1:8080/get_current_ema?symbol=BTCUSDT").get("data")
-    rsi_data = request_data("http://127.0.0.1:8080/get_current_rsi?symbol=BTCUSDT").get("data")
+    ema_data = request_data("http://127.0.0.1:8080/get_current_ema?symbol=BTCRUB").get("data")
+    rsi_data = request_data("http://127.0.0.1:8080/get_current_rsi?symbol=BTCRUB").get("data")
     if type(candlestick_dataframe) != None and type(sma_data) != None and type(ema_data) != None and type(rsi_data) != None:
 
         fig = make_subplots(rows=1, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)

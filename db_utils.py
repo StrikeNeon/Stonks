@@ -188,3 +188,32 @@ class MongoManager():
                 return -1
             else:
                 return 0
+
+    def banking_operate_on_symbol(self, symbol: str, value: float,  client: str, op_code: int):
+        """opcode 1 is addition, opcode 0 is substraction"""
+        current_value = self.user_collection.find_one({"username": symbol}).get("banking")
+        if not current_value:
+            current_value = {symbol: value}
+            added_value = self.user_collection.find_one_and_update({"username": client},
+                                                                   {"$set": {"banking": current_value}},
+                                                                   return_document=ReturnDocument.AFTER)
+            return added_value.get("banking").get(symbol)
+        if current_value.get("symbol"):
+            if op_code == 1:
+                new_value = (current_value.get("symbol") + value)
+            else:
+                if current_value.get("symbol") - value < 0:
+                    return
+                else:
+                    new_value = (current_value.get("symbol") - value)
+            current_value["symbol"] = new_value
+            added_value = self.user_collection.find_one_and_update({"username": client},
+                                                                   {"$set": {"banking": current_value}},
+                                                                   return_document=ReturnDocument.AFTER)
+            return added_value.get("banking").get(symbol)
+        else:
+            current_value["symbol"] = value
+            added_value = self.user_collection.find_one_and_update({"username": symbol},
+                                                                   {"$set": {"banking": current_value}},
+                                                                   return_document=ReturnDocument.AFTER)
+            return added_value.get("banking")
