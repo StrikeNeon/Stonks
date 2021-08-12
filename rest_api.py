@@ -127,6 +127,14 @@ async def compute_sma_scalp(symbol: str):
     elif current_signal == -1:
         return {"message": f"buy {symbol}"}
 
+@app.get("/operate_on_value", response_class=ORJSONResponse)
+async def operate_on_value(symbol: str, value: float, client: str, op_code: int):
+    current_bank = db_manager.banking_operate_on_symbol(symbol, value, client, op_code)
+    if not current_bank:
+        return {"message": f"{symbol} operation declined, not enough {symbol}"}
+    return {"message": f"{symbol} bank updated", "data": current_bank}
+
+
 
 if __name__ == "__main__":
     uvicorn.run("rest_api:app", host="127.0.0.1",
