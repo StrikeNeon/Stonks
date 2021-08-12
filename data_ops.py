@@ -69,25 +69,59 @@ class binance_api():
         base_dataframe = base_dataframe.append(data_tick, ignore_index=True)
         return base_dataframe
 
+# TODO Make banker class
+# subclass binance api, inherit client data
 
-def rma(x, n, y0):
-    a = (n-1) / n
-    ak = a**np.arange(len(x)-1, -1, -1)
-    return np.r_[np.full(n, np.nan), y0, np.cumsum(ak * x) / ak / n + y0 * a**np.arange(1, len(x)+1)]
+
+class binance_banker(binance_api):
+    def __init__(self):
+        super().__init__()
+
+    def make_test_order(self):
+
+        pass
+
+    def query_order(self):
+
+        pass
+
+    def cancel_order(self):
+
+        pass
+
+    def cancel_all_symbol_order(self):
+
+        pass
+
+    def recount_bank(self):
+
+        pass
+
+    def adjust_bank_value(self):
+
+        pass
+
+
+
 
 
 class technical_indicators():
 
-    def get_sma(data):
+    def get_sma(self, data):
         short_rolling = data["close"].rolling(window=20).mean()
         long_rolling = data["close"].rolling(window=40).mean()
         return short_rolling, long_rolling
 
-    def get_ema(data):
+    def get_ema(self, data):
         ema_short = data["close"].ewm(span=15, adjust=False).mean()
         return ema_short
 
-    def get_rsi(data, periods=14, ema=True):
+    def rma(self, x, n, y0):
+        a = (n-1) / n
+        ak = a**np.arange(len(x)-1, -1, -1)
+        return np.r_[np.full(n, np.nan), y0, np.cumsum(ak * x) / ak / n + y0 * a**np.arange(1, len(x)+1)]
+
+    def get_rsi(self, data, periods=14, ema=True):
         """
         Returns a pd.Series with the relative strength index.
         """
@@ -98,8 +132,8 @@ class technical_indicators():
         data['change'] = data['close'].diff()
         data['gain'] = data.change.mask(data.change < 0, 0.0)
         data['loss'] = -data.change.mask(data.change > 0, -0.0)
-        data['avg_gain'] = rma(data.gain[periods+1:].to_numpy(), periods, np.nansum(data.gain.to_numpy()[:periods+1])/periods)
-        data['avg_loss'] = rma(data.loss[periods+1:].to_numpy(), periods, np.nansum(data.loss.to_numpy()[:periods+1])/periods)
+        data['avg_gain'] = self.rma(data.gain[periods+1:].to_numpy(), periods, np.nansum(data.gain.to_numpy()[:periods+1])/periods)
+        data['avg_loss'] = self.rma(data.loss[periods+1:].to_numpy(), periods, np.nansum(data.loss.to_numpy()[:periods+1])/periods)
         data['rs'] = data.avg_gain / data.avg_loss
         data['rsi_14'] = 100 - (100 / (1 + data.rs))
         return data['rsi_14']

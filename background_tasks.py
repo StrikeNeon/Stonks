@@ -9,6 +9,14 @@ from celery.app.control import Control
 import schedule
 from time import sleep
 
+# TODO The whole rest api should be just task management
+# endpoints:
+#   data gathering,
+#   ta computation and signaling,
+#   banking operations,
+#   strategic analysis
+# custom task states are needed
+
 
 db_manager = MongoManager()
 # Create the celery app and get the logger
