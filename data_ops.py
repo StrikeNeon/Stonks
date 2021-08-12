@@ -1,5 +1,6 @@
 # Raw Package
 import pandas as pd
+import numpy as np
 
 # Data Source
 from binance.client import Client
@@ -16,26 +17,26 @@ class binance_api():
 
     def get_current_data(self, symbol):
         raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=60)
-        data = [{"open": record[1],
-                 "high": record[2],
-                 "low": record[3],
-                 "close": record[4],
-                 "volume": record[5],
-                 "trades": record[7],
-                 "taker_buy_base": record[8],
-                 "taker_buy_quote": record[9]} for record in raw_data]
+        data = [{"open": float(record[1]),
+                 "high": float(record[2]),
+                 "low": float(record[3]),
+                 "close": float(record[4]),
+                 "volume": float(record[5]),
+                 "trades": float(record[7]),
+                 "taker_buy_base": float(record[8]),
+                 "taker_buy_quote": float(record[9])} for record in raw_data]
         return data
 
     def get_data_tick(self, symbol):
         raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1)
-        data = [{"open": record[1],
-                 "high": record[2],
-                 "low": record[3],
-                 "close": record[4],
-                 "volume": record[5],
-                 "trades": record[7],
-                 "taker_buy_base": record[8],
-                 "taker_buy_quote": record[9]} for record in raw_data]
+        data = [{"open": float(record[1]),
+                 "high": float(record[2]),
+                 "low": float(record[3]),
+                 "close": float(record[4]),
+                 "volume": float(record[5]),
+                 "trades": float(record[7]),
+                 "taker_buy_base": float(record[8]),
+                 "taker_buy_quote": float(record[9])} for record in raw_data]
         return data
 
     def get_last_day(self, symbol):
@@ -69,11 +70,17 @@ class binance_api():
         return base_dataframe
 
 
+def rma(x, n, y0):
+    a = (n-1) / n
+    ak = a**np.arange(len(x)-1, -1, -1)
+    return np.r_[np.full(n, np.nan), y0, np.cumsum(ak * x) / ak / n + y0 * a**np.arange(1, len(x)+1)]
+
+
 class technical_indicators():
 
     def get_sma(data):
-        short_rolling = data["close"].rolling(window=10).mean()
-        long_rolling = data["close"].rolling(window=20).mean()
+        short_rolling = data["close"].rolling(window=20).mean()
+        long_rolling = data["close"].rolling(window=40).mean()
         return short_rolling, long_rolling
 
     def get_ema(data):
@@ -87,16 +94,12 @@ class technical_indicators():
         # close_delta = data["close"].diff()
 
         # Make two series: one for lower closes and one for higher closes
-        up = data["high"]
-        down = data["low"]
-        if ema:
-            # Use exponential moving average
-            ma_up = up.ewm(com=periods - 1, adjust=True, min_periods=periods).mean()
-            ma_down = down.ewm(com=periods - 1, adjust=True, min_periods=periods).mean()
-        else:
-            # Use simple moving average
-            ma_up = up.rolling(window=periods, adjust=False).mean()
-            ma_down = down.rolling(window=periods, adjust=False).mean()  
-        rsi = ma_up / ma_down
-        rsi = 100 - (100/(1 + rsi))
-        return rsi
+
+        data['change'] = data['close'].diff()
+        data['gain'] = data.change.mask(data.change < 0, 0.0)
+        data['loss'] = -data.change.mask(data.change > 0, -0.0)
+        data['avg_gain'] = rma(data.gain[periods+1:].to_numpy(), periods, np.nansum(data.gain.to_numpy()[:periods+1])/periods)
+        data['avg_loss'] = rma(data.loss[periods+1:].to_numpy(), periods, np.nansum(data.loss.to_numpy()[:periods+1])/periods)
+        data['rs'] = data.avg_gain / data.avg_loss
+        data['rsi_14'] = 100 - (100 / (1 + data.rs))
+        return data['rsi_14']

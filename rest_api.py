@@ -124,6 +124,8 @@ async def compute_sma_scalp(symbol: str):
         return {"message": f"sell {symbol}"}
     elif current_signal == 0:
         return {"message": f"hold {symbol}"}
+    elif current_signal == -1:
+        return {"message": f"buy {symbol}"}
 
 
 if __name__ == "__main__":

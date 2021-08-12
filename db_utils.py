@@ -179,10 +179,12 @@ class MongoManager():
         if current_data == 404:
             return 404
         else:
-            sma_data = self.recount_sma(symbol).get("short_rolling")
-            last_data, last_sma_data = float(current_data[-1].get("close")), sma_data[-1]
-            if last_sma_data < last_data:
+            s_sma_data = self.recount_sma(symbol).get("short_rolling")
+            l_sma_data = self.recount_sma(symbol).get("long_rolling")
+            last_data, last_s_sma_data, last_l_sma_data = float(current_data[-1].get("close")), s_sma_data[-1], l_sma_data[-1]
+            if last_s_sma_data < last_data:
                 return 1
+            elif last_l_sma_data > last_data:
+                return -1
             else:
                 return 0
-            print(f"{last_data}, {last_sma_data}")
