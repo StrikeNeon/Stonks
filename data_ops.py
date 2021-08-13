@@ -4,6 +4,7 @@ import numpy as np
 
 # Data Source
 from binance.client import Client
+from binance.enums import SIDE_BUY, SIDE_SELL, ORDER_TYPE_LIMIT, TIME_IN_FORCE_GTC
 
 
 class binance_api():
@@ -77,19 +78,30 @@ class binance_banker(binance_api):
     def __init__(self):
         super().__init__()
 
-    def make_test_order(self):
+    def make_test_order(self, quantity: int, price: float, op_code: int):
+        order = self.client.create_test_order(symbol='BNBBTC',
+                                              side=SIDE_BUY if op_code == -1 else SIDE_SELL,
+                                              type=ORDER_TYPE_LIMIT,
+                                              timeInForce=TIME_IN_FORCE_GTC,
+                                              quantity=quantity,
+                                              price=str(price))
+        return order
 
-        pass
+    def query_order(self, symbol: str, order_id: str):
+        order = self.client.get_order(symbol=symbol,
+                                      orderId=order_id)
 
-    def query_order(self):
+        return order
 
-        pass
+    def cancel_order(self, symbol: str, order_id: str):
+        result = self.client.cancel_order(symbol=symbol,
+                                          orderId=order_id)
+        return result
 
-    def cancel_order(self):
-
-        pass
-
-    def cancel_all_symbol_order(self):
+    def cancel_all_symbol_order(self, symbol: str):
+        orders = self.client.get_open_orders(symbol=symbol)
+        for order in orders:
+            self.cancel_order(symbol, order.get("OrderId"))
 
         pass
 
