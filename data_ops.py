@@ -78,8 +78,12 @@ class binance_banker(binance_api):
     def __init__(self):
         super().__init__()
 
-    def make_test_order(self, quantity: int, price: float, op_code: int):
-        order = self.client.create_test_order(symbol='BNBBTC',
+    def get_account_status(self):
+        status = self.client.get_account_status()
+        return status
+
+    def make_test_order(self, symbol: str, quantity: float, price: float, op_code: int):
+        order = self.client.create_test_order(symbol=symbol,
                                               side=SIDE_BUY if op_code == -1 else SIDE_SELL,
                                               type=ORDER_TYPE_LIMIT,
                                               timeInForce=TIME_IN_FORCE_GTC,
@@ -100,10 +104,11 @@ class binance_banker(binance_api):
 
     def cancel_all_symbol_order(self, symbol: str):
         orders = self.client.get_open_orders(symbol=symbol)
+        results = []
         for order in orders:
-            self.cancel_order(symbol, order.get("OrderId"))
-
-        pass
+            cancel_result = self.cancel_order(symbol, order.get("OrderId"))
+            results.append(cancel_result)
+        return results
 
     def recount_bank(self):
 
