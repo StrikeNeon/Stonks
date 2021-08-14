@@ -123,7 +123,7 @@ class MongoManager():
             return current_candlestick
 
     def add_symbol_tick(self, symbol: str, client: str):
-        if client in self.active_clients:
+        if client in self.active_clients.keys():
             current_data = self.symbols_collection.find_one({"symbol_name": symbol})
             if not symbol:
                 return 404
@@ -189,8 +189,34 @@ class MongoManager():
             else:
                 return 0
 
+    def sync_banks(self, symbol: str, client: str):
+        if client not in self.active_clients.keys():
+            return 403
+        bank_data = self.active_clients.get(client).get_symbol_balance(symbol=symbol)
+        self.db_logger.debug(f"symbol bank: {bank_data}")
+        return bank_data
+
+    def account_status(self, client: str):
+        if client not in self.active_clients.keys():
+            return 403, None
+        status_data = self.active_clients.get(client).get_account_status()
+        trade_status_data = self.active_clients.get(client).get_client_trading_status()
+        return status_data, trade_status_data
+
+    def get_all_fees(self, client: str):
+        if client not in self.active_clients.keys():
+            return 403
+        fees_data = self.active_clients.get(client).get_fees()
+        return fees_data
+
+    def make_test_order(self, client: str, symbol: str, quantity: float, price: float, op_code: int):
+        if client not in self.active_clients.keys():
+            return 403
+        result = self.active_clients.get(client).make_test_order(symbol, quantity, price, op_code)
+        return result
+
     def banking_operate_on_symbol(self, symbol: str, value: float,  client: str, op_code: int):
-        """opcode 1 is addition, opcode 0 is substraction"""
+        """opcode 1 is addition, 0 is substraction"""
         current_value = self.user_collection.find_one({"username": client}).get("bank_data")
         if not current_value:
             current_value = {symbol: value}

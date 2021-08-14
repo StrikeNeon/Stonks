@@ -5,7 +5,11 @@ import numpy as np
 # Data Source
 from binance.client import Client
 from binance.enums import SIDE_BUY, SIDE_SELL, ORDER_TYPE_LIMIT, TIME_IN_FORCE_GTC
+from binance.exceptions import BinanceAPIException
 
+
+# TODO Make banker class
+# subclass binance api, inherit client data
 
 class binance_api():
     def __init__(self, api_key, api_secret):
@@ -70,25 +74,23 @@ class binance_api():
         base_dataframe = base_dataframe.append(data_tick, ignore_index=True)
         return base_dataframe
 
-# TODO Make banker class
-# subclass binance api, inherit client data
-
-
-class binance_banker(binance_api):
-    def __init__(self):
-        super().__init__()
-
     def get_account_status(self):
         status = self.client.get_account_status()
         return status
 
+    # banking
+
     def make_test_order(self, symbol: str, quantity: float, price: float, op_code: int):
-        order = self.client.create_test_order(symbol=symbol,
-                                              side=SIDE_BUY if op_code == -1 else SIDE_SELL,
-                                              type=ORDER_TYPE_LIMIT,
-                                              timeInForce=TIME_IN_FORCE_GTC,
-                                              quantity=quantity,
-                                              price=str(price))
+        """-1 is buy, sell is 1"""
+        try:
+            order = self.client.create_test_order(symbol=symbol,
+                                                side=SIDE_BUY if op_code == -1 else SIDE_SELL,
+                                                type=ORDER_TYPE_LIMIT,
+                                                timeInForce=TIME_IN_FORCE_GTC,
+                                                quantity=quantity,
+                                                price=str(price))
+        except BinanceAPIException:
+            return 403
         return order
 
     def query_order(self, symbol: str, order_id: str):
@@ -110,16 +112,22 @@ class binance_banker(binance_api):
             results.append(cancel_result)
         return results
 
-    def recount_bank(self):
+    def get_client_trading_status(self):
+        status = self.client.get_account_api_trading_status()
+        return status
 
-        pass
+    def get_symbol_balance(self, symbol):
+        balance = self.client.get_asset_balance(asset=symbol)
+        return balance
 
-    def adjust_bank_value(self):
-
-        pass
+    def get_fees(self):
+        fees = self.client.get_trade_fee()
+        return fees
 
 
 class technical_indicators():
+    def __init__(self):
+        pass
 
     def get_sma(self, data):
         short_rolling = data["close"].rolling(window=20).mean()

@@ -19,6 +19,14 @@ class client_model(BaseModel):
     api_secret: str
 
 
+class order_model(BaseModel):
+    client: str
+    symbol: str
+    quantity: float
+    price: float
+    op_code: int
+
+
 @app.post("/add_client", response_class=ORJSONResponse)
 async def add_client(new_client: client_model):
     added_client = db_manager.register_client(dict(new_client))
@@ -127,14 +135,49 @@ async def compute_sma_scalp(symbol: str):
     elif current_signal == -1:
         return {"message": f"buy {symbol}"}
 
-@app.get("/operate_on_value", response_class=ORJSONResponse)
-async def operate_on_value(symbol: str, value: float, client: str, op_code: int):
-    current_bank = db_manager.banking_operate_on_symbol(symbol, value, client, op_code)
-    if not current_bank:
-        return {"message": f"{symbol} operation declined, not enough {symbol}"}
+@app.get("/sync_symbols", response_class=ORJSONResponse)
+async def sync_symbols(symbol: str, client: str):
+    current_bank = db_manager.sync_banks(symbol, client)
+    if current_bank == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="login or password incorrect"
+        )
     return {"message": f"{symbol} bank updated", "data": current_bank}
 
+@app.get("/account_status", response_class=ORJSONResponse)
+async def get_account_status(client: str):
+    status_data, trade_status_data = db_manager.account_status(client)
+    if status_data == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="login or password incorrect"
+        )
+    return {"message": f"{client} data retrieved",
+            "status data": status_data,
+            "trade status data": trade_status_data}
 
+@app.get("/get_all_fees", response_class=ORJSONResponse)
+async def get_fees(client: str):
+    fees = db_manager.get_all_fees(client)
+    if fees == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="login or password incorrect"
+        )
+    return {"message": f"{client} retrieved fees",
+            "fees": fees}
+
+@app.post("/make_test_order", response_class=ORJSONResponse)
+async def make_test_order(order: order_model):
+    result = db_manager.make_test_order(order.client, order.symbol, order.quantity, order.price, order.op_code)
+    if result == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API-key, IP, or permissions for action."
+        )
+    return {"message": f"{order.client} tested order",
+            "result": result}
 
 if __name__ == "__main__":
     uvicorn.run("rest_api:app", host="127.0.0.1",
