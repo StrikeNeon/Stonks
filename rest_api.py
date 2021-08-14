@@ -55,6 +55,17 @@ async def activate_client(client: str, password: str):
             detail="login or password incorrect"
         )
 
+@app.get("/account_status", response_class=ORJSONResponse)
+async def get_account_status(client: str):
+    status_data, trade_status_data = db_manager.account_status(client)
+    if status_data == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="login or password incorrect"
+        )
+    return {"message": f"{client} data retrieved",
+            "status data": status_data,
+            "trade status data": trade_status_data}
 
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
 async def start_gathering_symbol(symbol: str, client: str, password: str, minute_interval: int):
@@ -135,6 +146,7 @@ async def compute_sma_scalp(symbol: str):
     elif current_signal == -1:
         return {"message": f"buy {symbol}"}
 
+
 @app.get("/sync_symbols", response_class=ORJSONResponse)
 async def sync_symbols(symbol: str, client: str):
     current_bank = db_manager.sync_banks(symbol, client)
@@ -145,17 +157,6 @@ async def sync_symbols(symbol: str, client: str):
         )
     return {"message": f"{symbol} bank updated", "data": current_bank}
 
-@app.get("/account_status", response_class=ORJSONResponse)
-async def get_account_status(client: str):
-    status_data, trade_status_data = db_manager.account_status(client)
-    if status_data == 403:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="login or password incorrect"
-        )
-    return {"message": f"{client} data retrieved",
-            "status data": status_data,
-            "trade status data": trade_status_data}
 
 @app.get("/get_all_fees", response_class=ORJSONResponse)
 async def get_fees(client: str):
