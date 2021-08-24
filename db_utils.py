@@ -166,6 +166,18 @@ class MongoManager():
                                                              {"$set": {"rsi_data": rsi.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("rsi_data")
 
+    def recount_bbands(self, symbol: str):
+        current_data = self.symbols_collection.find_one({"symbol_name": symbol})
+        if not current_data:
+            return 404
+        else:
+            sma = technical_indicators.get_sma(DataFrame(current_data.get("candlestick_data"))).get("short_rolling")
+            upper_bb, lower_bb = technical_indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
+            current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
+                                                             {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
+                                                                                     "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
+            return current_rsi.get("bband_data")
+
     def recount_last_day(self, symbol: str):
 
         pass

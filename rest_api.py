@@ -130,6 +130,17 @@ async def get_current_rsi(symbol: str):
     else:
         return {"message": f"{symbol} rsi recounted", "data": current_rsi}
 
+@app.get("/get_current_bbands", response_class=ORJSONResponse)
+async def get_current_sma(symbol: str):
+    current_bbands = db_manager.recount_bbands(symbol)
+    if current_bbands == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    else:
+        return {"message": f"{symbol} sma recounted", "data": current_bbands}
+
 
 @app.get("/compute_sma_scalp", response_class=ORJSONResponse)
 async def compute_sma_scalp(symbol: str):

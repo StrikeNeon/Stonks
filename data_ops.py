@@ -159,3 +159,12 @@ class technical_indicators():
         data['rs'] = data.avg_gain / data.avg_loss
         data['rsi_14'] = 100 - (100 / (1 + data.rs))
         return data['rsi_14']
+
+    def get_bollinger_bands(self, data, sma, window):
+        """
+        Returns a pd.Series with the relative strength index.
+        """
+        std = data["close"].rolling(window=window).std()
+        upper_bb = sma + std * 2
+        lower_bb = sma - std * 2
+        return upper_bb, lower_bb
