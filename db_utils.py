@@ -172,7 +172,7 @@ class MongoManager():
             return 404
         else:
             sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[0]
-            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
