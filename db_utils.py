@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 from datetime import timedelta, datetime
 from settings import ALGORITHM, SECRET_KEY
 
-
+indicators = technical_indicators()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -140,7 +140,7 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            short_rolling, long_rolling = technical_indicators.get_sma(DataFrame(current_data.get("candlestick_data")))
+            short_rolling, long_rolling = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))
             current_sma = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"sma_data": {"short_rolling": short_rolling.tolist(),
                                                                                     "long_rolling": long_rolling.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -151,7 +151,7 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            ema = technical_indicators.get_ema(DataFrame(current_data.get("candlestick_data")))
+            ema = indicators.get_ema(DataFrame(current_data.get("candlestick_data")))
             current_ema = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"ema_data": ema.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_ema.get("ema_data")
@@ -161,7 +161,7 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            rsi = technical_indicators.get_rsi(DataFrame(current_data.get("candlestick_data")))
+            rsi = indicators.get_rsi(DataFrame(current_data.get("candlestick_data")))
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"rsi_data": rsi.tolist()}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("rsi_data")
@@ -171,8 +171,8 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            sma = technical_indicators.get_sma(DataFrame(current_data.get("candlestick_data"))).get("short_rolling")
-            upper_bb, lower_bb = technical_indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
+            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[0]
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -186,17 +186,17 @@ class MongoManager():
 
         pass
 
-    def get_scalp_signal(self, symbol: str):
+    def get_bbands_signal(self, symbol: str):
         current_data = self.get_current_data(symbol)
         if current_data == 404:
             return 404
         else:
-            s_sma_data = self.recount_sma(symbol).get("short_rolling")
-            l_sma_data = self.recount_sma(symbol).get("long_rolling")
-            last_data, last_s_sma_data, last_l_sma_data = float(current_data[-1].get("close")), s_sma_data[-1], l_sma_data[-1]
-            if last_s_sma_data < last_data:
+            upper_bb_data = self.recount_bbands(symbol).get("upper_bb")
+            lower_bb_data = self.recount_bbands(symbol).get("lower_bb")
+            last_data, last_upper_bb_data, last_lower_bb_data = float(current_data[-1].get("close")), upper_bb_data[-1], lower_bb_data[-1]
+            if last_data > last_upper_bb_data:
                 return 1
-            elif last_l_sma_data > last_data:
+            elif last_data < last_lower_bb_data:
                 return -1
             else:
                 return 0

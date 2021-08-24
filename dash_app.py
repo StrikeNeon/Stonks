@@ -26,7 +26,7 @@ app.layout = html.Div(
 @app.callback(Output('live-update-text', 'children'),
               Input('interval-btc', 'n_intervals'))
 def update_metrics(n):
-    request = requests.get("http://127.0.0.1:8080/get_current_data?symbol=BTCRUB")
+    request = requests.get("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB")
     if request.status_code == 200:
         data = request.json()
         style = {'padding': '5px', 'fontSize': '16px'}
@@ -48,15 +48,24 @@ def update_metrics(n):
               Input('interval-btc', 'n_intervals'))
 def update_graph_live(n):
 
-    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8080/get_current_data?symbol=BTCRUB").get("data"))
-    sma_data = request_data("http://127.0.0.1:8080/get_current_sma?symbol=BTCRUB").get("data")
-    l_sma = sma_data.get("long_rolling")
-    s_sma = sma_data.get("short_rolling")
-    ema_data = request_data("http://127.0.0.1:8080/get_current_ema?symbol=BTCRUB").get("data")
-    rsi_data = request_data("http://127.0.0.1:8080/get_current_rsi?symbol=BTCRUB").get("data")
-    if type(candlestick_dataframe) != None and type(sma_data) != None and type(ema_data) != None and type(rsi_data) != None:
+    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
+    sma_data = request_data("http://127.0.0.1:8082/get_current_sma?symbol=BTCRUB").get("data")
+    try:
+        l_sma = sma_data.get("long_rolling")
+        s_sma = sma_data.get("short_rolling")
+    except AttributeError:
+        pass
+    ema_data = request_data("http://127.0.0.1:8082/get_current_ema?symbol=BTCRUB").get("data")
+    rsi_data = request_data("http://127.0.0.1:8082/get_current_rsi?symbol=BTCRUB").get("data")
+    bbands_data = request_data("http://127.0.0.1:8082/get_current_bbands?symbol=BTCRUB").get("data")
+    try:
+        upper_bband = bbands_data.get("upper_bb")
+        lower_bband = bbands_data.get("lower_bb")
+    except AttributeError:
+        pass
+    if type(candlestick_dataframe) != None and type(sma_data) != None and type(ema_data) != None and type(rsi_data) != None and type(bbands_data) != None:
 
-        fig = make_subplots(rows=1, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig = make_subplots(rows=2, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
         fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
                         open=candlestick_dataframe['open'],
@@ -85,6 +94,14 @@ def update_graph_live(n):
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=s_sma, mode='lines', name='short sma'), row=1, col=1)
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=l_sma, mode='lines', name='long sma'), row=1, col=1)
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=ema_data, mode='lines', name='ema'), row=1, col=1)
+
+        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
+                        open=candlestick_dataframe['open'],
+                        high=candlestick_dataframe['high'],
+                        low=candlestick_dataframe['low'],
+                        close=candlestick_dataframe['close'], name='market data'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=upper_bband, mode='lines', name='upper bband'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=lower_bband, mode='lines', name='lower bband'), row=2, col=1)
 
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=rsi_data, mode='lines', name='rsi'), row=1, col=2)
 

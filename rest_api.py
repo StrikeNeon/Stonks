@@ -70,6 +70,7 @@ async def get_account_status(client: str):
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
 async def start_gathering_symbol(symbol: str, client: str, password: str, minute_interval: int):
     # TODO login with token here?
+    # TODO add latest active task to current data task
     # This is a crutch, client activation (db_manager.add_client) should be a separate endpoint
     # and this should verify token, but celery doesn't detect changes in active clients
     # though binance care about ips and not connections
@@ -158,6 +159,22 @@ async def compute_sma_scalp(symbol: str):
         return {"message": f"buy {symbol}"}
 
 
+@app.get("/compute_bband_scalp", response_class=ORJSONResponse)
+async def compute_bband_scalp(symbol: str):
+    current_signal = db_manager.get_bbands_signal(symbol)
+    if current_signal == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    elif current_signal == 1:
+        return {"message": f"sell {symbol}"}
+    elif current_signal == 0:
+        return {"message": f"hold {symbol}"}
+    elif current_signal == -1:
+        return {"message": f"buy {symbol}"}
+
+
 @app.get("/sync_symbols", response_class=ORJSONResponse)
 async def sync_symbols(symbol: str, client: str):
     current_bank = db_manager.sync_banks(symbol, client)
@@ -193,5 +210,5 @@ async def make_test_order(order: order_model):
 
 if __name__ == "__main__":
     uvicorn.run("rest_api:app", host="127.0.0.1",
-                port=8080, reload=True,
+                port=8082, reload=True,
                 log_level="info")
