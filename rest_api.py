@@ -216,12 +216,16 @@ async def compute_combined_signal(symbol: str, thresh: int):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"symbol {symbol} not found"
         )
-    elif (current_sma == 1 and current_rsi == 1) or current_bbands == 1:
+    elif current_bbands == 1:
         return {"message": f"sell {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 1}
-    elif current_sma == 0 or current_bbands == 0:
-        return {"message": f"hold {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 0}
-    elif (current_sma == -1 and current_rsi == -1) or current_bbands == -1:
+    elif current_bbands == -1:
         return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
+    elif current_sma == 1 and current_rsi == 1:
+        return {"message": f"sell {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 1}
+    elif current_sma == -1 and current_rsi == -1:
+        return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
+    else:
+        return {"message": f"hold {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 0}
 
 
 @app.get("/sync_symbols", response_class=ORJSONResponse)

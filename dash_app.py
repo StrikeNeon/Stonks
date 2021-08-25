@@ -6,7 +6,6 @@ import dash_html_components as html
 import plotly.graph_objs as go
 from plotly.tools import make_subplots
 from dash.dependencies import Input, Output
-from plotly.validators.scatter.marker import SymbolValidator
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -15,6 +14,8 @@ app.layout = html.Div(
     html.Div([
         html.H4('BTC live recount'),
         html.Div(id='live-update-text'),
+        html.Div(id='live-update-signal'),
+        dcc.Graph(id='live-update-main_candles'),
         dcc.Graph(id='live-update-graph'),
         dcc.Interval(
             id='interval-btc',
@@ -22,7 +23,6 @@ app.layout = html.Div(
             n_intervals=0
         ),
         dcc.Graph(id='live-update-siggraoh'),
-        html.Div(id='live-update-signal'),
     ])
 )
 
@@ -39,6 +39,45 @@ def update_metrics(n):
             html.Span(f'low: {data.get("data")[-1].get("low")}', style=style),
             html.Span(f'close: {data.get("data")[-1].get("close")}', style=style)
         ]
+    else:
+        style = {'padding': '5px', 'fontSize': '16px'}
+        return [
+            html.Span('error retrieving data', style=style)
+        ]
+
+@app.callback(Output('live-update-main_candles', 'figure'),
+              Input('interval-btc', 'n_intervals'))
+def update_main_candlestick(n):
+    current_data = requests.get("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB")
+    if current_data.status_code == 200:
+        candlestick_dataframe = DataFrame(current_data.json().get("data"))
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        #Candlestick
+        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
+                        open=candlestick_dataframe['open'],
+                        high=candlestick_dataframe['high'],
+                        low=candlestick_dataframe['low'],
+                        close=candlestick_dataframe['close'], name='market data'), row=1, col=1)
+
+        # Add titles
+        fig.update_layout(
+            title='BTC to RUB pair price evolution',
+            yaxis_title='BTCRUB share data')
+
+        # X-Axes
+        fig.update_xaxes(
+            rangeslider_visible=True,
+            rangeselector=dict(
+                buttons=list([
+                    dict(count=15, label="15m", step="minute", stepmode="backward"),
+                    dict(count=45, label="45m", step="minute", stepmode="backward"),
+                    dict(count=1, label="HTD", step="hour", stepmode="todate"),
+                    dict(count=6, label="6h", step="hour", stepmode="backward"),
+                    dict(step="all")
+                ])
+            )
+        )
+        return fig
     else:
         style = {'padding': '5px', 'fontSize': '16px'}
         return [
@@ -70,16 +109,13 @@ def update_graph_live(n):
 
         fig = make_subplots(rows=2, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
-        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
-                        open=candlestick_dataframe['open'],
-                        high=candlestick_dataframe['high'],
-                        low=candlestick_dataframe['low'],
-                        close=candlestick_dataframe['close'], name='market data'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
+                        y=candlestick_dataframe['close'], name='market data'), row=1, col=1)
 
         # Add titles
         fig.update_layout(
-            title='BTC to USD pair price evolution',
-            yaxis_title='BTCUSD share data')
+            title='BTC to RUB ta analysis',
+            yaxis_title='BTCRUB share data')
 
         # X-Axes
         fig.update_xaxes(
@@ -138,7 +174,8 @@ def update_signal_graph(n):
                                     line_color="white",
                                     marker_symbol=marker_symbol,
                                     marker_color=marker_color), row=1, col=1)
-        style = {'padding': '5px', 'fontSize': '16px'}
+        fig.update_layout(
+            title='BTC to RUB signaling')
         return fig
     else:
         style = {'padding': '5px', 'fontSize': '16px'}
@@ -150,13 +187,10 @@ def update_signal_graph(n):
 @app.callback(Output('live-update-signal', 'children'),
               Input('interval-btc', 'n_intervals'))
 def update_signals(n):
-    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
     signal = requests.get("http://127.0.0.1:8082/combined_signal?symbol=BTCRUB&thresh=5")
 
     if signal.status_code == 200:
         signal_data = signal.json()
-        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=candlestick_dataframe['close'], mode='lines', name='signaling'), row=1, col=1)
         style = {'padding': '5px', 'fontSize': '16px'}
         return [
             html.Span(f'decided signal: {signal_data.get("message")}', style=style),
