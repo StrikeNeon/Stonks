@@ -19,7 +19,8 @@ app.layout = html.Div(
             id='interval-btc',
             interval=(1*60)*1000,  # in milliseconds, 60 minutes per interval
             n_intervals=0
-        )
+        ),
+        html.Div(id='live-update-signals'),
     ])
 )
 
@@ -109,11 +110,41 @@ def update_graph_live(n):
             html.Span('error retrieving data', style=style)
         ]
 
+
+@app.callback(Output('live-update-signals', 'children'),
+              Input('interval-btc', 'n_intervals'))
+def update_signals(n):
+    sma_signal = requests.get("http://127.0.0.1:8082/compute_sma_scalp?symbol=BTCRUB")
+    sma_cross_signal = requests.get("http://127.0.0.1:8082/compute_sma_cross_scalp?symbol=BTCRUB")
+    bband_signal = requests.get("http://127.0.0.1:8082/compute_bband_scalp?symbol=BTCRUB")
+    rsi_signal = requests.get("http://127.0.0.1:8082/compute_rsi_scalp?symbol=BTCRUB")
+
+    if sma_signal.status_code == 200 and bband_signal.status_code == 200 and sma_cross_signal.status_code == 200 and rsi_signal.status_code == 200:
+        sma_data = sma_signal.json()
+        sma_cross_data = sma_cross_signal.json()
+        bband_data = bband_signal.json()
+        rsi_data = rsi_signal.json()
+
+        style = {'padding': '5px', 'fontSize': '16px'}
+        return [
+            html.Span(f'sma signal: {sma_data.get("message")}', style=style),
+            html.Span(f'sma cross  signal: {sma_cross_data.get("message")}', style=style),
+            html.Span(f'bband signal: {bband_data.get("message")}', style=style),
+            html.Span(f'rsi signal: {rsi_data.get("message")}', style=style)
+        ]
+    else:
+        style = {'padding': '5px', 'fontSize': '16px'}
+        return [
+            html.Span('error retrieving data', style=style)
+        ]
+
+
 def request_data(link: str):
     data_responce = requests.get(link)
     if data_responce.status_code == 200:
         data = data_responce.json()
         return data
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)

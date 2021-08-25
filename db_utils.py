@@ -171,8 +171,8 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[1]
-            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
+            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[0]
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -185,8 +185,23 @@ class MongoManager():
     def recount_last_week(self, symbol: str):
 
         pass
+    
+    def get_sma_cross_signal(self, symbol: str):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            s_sma_data = self.recount_sma(symbol).get("short_rolling")
+            l_sma_data = self.recount_sma(symbol).get("long_rolling")
+            last_data, last_s_sma_data, last_l_sma_data = float(current_data[-1].get("close")), s_sma_data[-1], l_sma_data[-1]
+            if last_s_sma_data == last_l_sma_data and last_l_sma_data < last_data:
+                return 1
+            elif last_s_sma_data == last_l_sma_data and last_l_sma_data > last_data:
+                return -1
+            else:
+                return 0
 
-    def get_scalp_signal(self, symbol: str):
+    def get_sma_signal(self, symbol: str):
         current_data = self.get_current_data(symbol)
         if current_data == 404:
             return 404
@@ -212,6 +227,21 @@ class MongoManager():
             if last_data > last_upper_bb_data:
                 return 1
             elif last_data < last_lower_bb_data:
+                return -1
+            else:
+                return 0
+
+    def get_rsi_signal(self, symbol: str):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            rsi = indicators.get_rsi(DataFrame(current_data))
+            last_rsi = rsi.tolist()[-1]
+            self.db_logger.debug(f"last rsi: {last_rsi}, max {rsi.max()} 1/3 of max: {rsi.max()//3} 2/3 of max: {rsi.max()-rsi.max()//3}")
+            if last_rsi > rsi.max()-rsi.max()//3:
+                return 1
+            elif last_rsi < rsi.max()//3:
                 return -1
             else:
                 return 0

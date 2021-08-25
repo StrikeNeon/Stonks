@@ -145,7 +145,37 @@ async def get_current_sma(symbol: str):
 
 @app.get("/compute_sma_scalp", response_class=ORJSONResponse)
 async def compute_sma_scalp(symbol: str):
-    current_signal = db_manager.get_scalp_signal(symbol)
+    current_signal = db_manager.get_sma_signal(symbol)
+    if current_signal == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    elif current_signal == 1:
+        return {"message": f"sell {symbol}"}
+    elif current_signal == 0:
+        return {"message": f"hold {symbol}"}
+    elif current_signal == -1:
+        return {"message": f"buy {symbol}"}
+
+@app.get("/compute_sma_cross_scalp", response_class=ORJSONResponse)
+async def compute_sma_cross_scalp(symbol: str):
+    current_signal = db_manager.get_sma_cross_signal(symbol)
+    if current_signal == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    elif current_signal == 1:
+        return {"message": f"sell {symbol}"}
+    elif current_signal == 0:
+        return {"message": f"hold {symbol}"}
+    elif current_signal == -1:
+        return {"message": f"buy {symbol}"}
+
+@app.get("/compute_bband_scalp", response_class=ORJSONResponse)
+async def compute_bband_scalp(symbol: str):
+    current_signal = db_manager.get_bbands_signal(symbol)
     if current_signal == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -159,9 +189,9 @@ async def compute_sma_scalp(symbol: str):
         return {"message": f"buy {symbol}"}
 
 
-@app.get("/compute_bband_scalp", response_class=ORJSONResponse)
-async def compute_bband_scalp(symbol: str):
-    current_signal = db_manager.get_bbands_signal(symbol)
+@app.get("/compute_rsi_scalp", response_class=ORJSONResponse)
+async def compute_rsi_scalp(symbol: str):
+    current_signal = db_manager.get_rsi_signal(symbol)
     if current_signal == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
