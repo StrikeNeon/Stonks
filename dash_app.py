@@ -22,7 +22,7 @@ app.layout = html.Div(
             interval=(1*60)*1000,  # in milliseconds, 60 minutes per interval
             n_intervals=0
         ),
-        dcc.Graph(id='live-update-siggraoh'),
+        dcc.Graph(id='live-update-siggraph'),
     ])
 )
 
@@ -149,7 +149,7 @@ def update_graph_live(n):
         ]
 
 
-@app.callback(Output('live-update-siggraoh', 'figure'),
+@app.callback(Output('live-update-siggraph', 'figure'),
               Input('interval-btc', 'n_intervals'))
 def update_signal_graph(n):
     candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
@@ -194,7 +194,7 @@ def update_signals(n):
         style = {'padding': '5px', 'fontSize': '16px'}
         return [
             html.Span(f'decided signal: {signal_data.get("message")}', style=style),
-            html.Span(f'sma: {signal_data.get("sma_signal")}, rsi: {signal_data.get("sma_signal")}', style=style),
+            html.Span(f'sma: {signal_data.get("sma_signal")}, rsi: {signal_data.get("rsi_signal")}', style=style),
             html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style),
         ]
     else:

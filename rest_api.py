@@ -211,6 +211,7 @@ async def compute_combined_signal(symbol: str, thresh: int):
     current_sma = db_manager.get_sma_signal(symbol)
     current_bbands = db_manager.get_bbands_signal(symbol)
     current_rsi = db_manager.get_rsi_signal(symbol, thresh)
+    print(current_sma == -1 and current_rsi == -1)
     if current_sma == 404 or current_bbands == 404 or current_rsi == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -218,14 +219,14 @@ async def compute_combined_signal(symbol: str, thresh: int):
         )
     elif current_bbands == 1:
         return {"message": f"sell {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 1}
-    elif current_bbands == -1:
-        return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
     elif current_sma == 1 and current_rsi == 1:
         return {"message": f"sell {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 1}
-    elif current_sma == 0 and current_bbands == 0:
-        return {"message": f"hold {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 0}
+    elif current_bbands == -1:
+        return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
     elif current_sma == -1 and current_rsi == -1:
         return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
+    else:
+        return {"message": f"hold {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 0}
 
 
 @app.get("/sync_symbols", response_class=ORJSONResponse)
