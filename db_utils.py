@@ -122,14 +122,14 @@ class MongoManager():
             current_candlestick = current_data.get("candlestick_data")
             return current_candlestick
 
-    def add_symbol_tick(self, symbol: str, client: str):
+    def add_symbol_tick(self, symbol: str, client: str, interval: int):
         if client in self.active_clients.keys():
             current_data = self.symbols_collection.find_one({"symbol_name": symbol})
             if not symbol:
                 return 404
             else:
                 candlestick_data = current_data.get("candlestick_data")
-                data_tick = self.active_clients.get(client).get_data_tick(symbol)
+                data_tick = self.active_clients.get(client).get_data_tick(symbol, interval)
                 candlestick_data.extend(data_tick)
             updated_data = self.symbols_collection.find_one_and_update({"symbol_name": symbol}, {"$set": {"candlestick_data": candlestick_data}}, return_document=ReturnDocument.AFTER)
             return updated_data.get("candlestick_data")
@@ -171,8 +171,8 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[0]
-            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
+            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[1]
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -185,6 +185,21 @@ class MongoManager():
     def recount_last_week(self, symbol: str):
 
         pass
+
+    def get_scalp_signal(self, symbol: str):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            s_sma_data = self.recount_sma(symbol).get("short_rolling")
+            l_sma_data = self.recount_sma(symbol).get("long_rolling")
+            last_data, last_s_sma_data, last_l_sma_data = float(current_data[-1].get("close")), s_sma_data[-1], l_sma_data[-1]
+            if last_s_sma_data < last_data:
+                return 1
+            elif last_l_sma_data > last_data:
+                return -1
+            else:
+                return 0
 
     def get_bbands_signal(self, symbol: str):
         current_data = self.get_current_data(symbol)

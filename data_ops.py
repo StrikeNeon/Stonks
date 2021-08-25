@@ -32,8 +32,8 @@ class binance_api():
                  "taker_buy_quote": float(record[9])} for record in raw_data]
         return data
 
-    def get_data_tick(self, symbol):
-        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1)
+    def get_data_tick(self, symbol, interval):
+        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1*interval)
         data = [{"open": float(record[1]),
                  "high": float(record[2]),
                  "low": float(record[3]),

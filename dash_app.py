@@ -95,11 +95,8 @@ def update_graph_live(n):
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=l_sma, mode='lines', name='long sma'), row=1, col=1)
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=ema_data, mode='lines', name='ema'), row=1, col=1)
 
-        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
-                        open=candlestick_dataframe['open'],
-                        high=candlestick_dataframe['high'],
-                        low=candlestick_dataframe['low'],
-                        close=candlestick_dataframe['close'], name='market data'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
+                        y=candlestick_dataframe['close'], mode='lines', name='market data'), row=2, col=1)
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=upper_bband, mode='lines', name='upper bband'), row=2, col=1)
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=lower_bband, mode='lines', name='lower bband'), row=2, col=1)
 
