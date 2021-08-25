@@ -6,6 +6,7 @@ import dash_html_components as html
 import plotly.graph_objs as go
 from plotly.tools import make_subplots
 from dash.dependencies import Input, Output
+from plotly.validators.scatter.marker import SymbolValidator
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -20,7 +21,8 @@ app.layout = html.Div(
             interval=(1*60)*1000,  # in milliseconds, 60 minutes per interval
             n_intervals=0
         ),
-        html.Div(id='live-update-signals'),
+        dcc.Graph(id='live-update-siggraoh'),
+        html.Div(id='live-update-signal'),
     ])
 )
 
@@ -111,26 +113,55 @@ def update_graph_live(n):
         ]
 
 
-@app.callback(Output('live-update-signals', 'children'),
+@app.callback(Output('live-update-siggraoh', 'figure'),
               Input('interval-btc', 'n_intervals'))
-def update_signals(n):
-    sma_signal = requests.get("http://127.0.0.1:8082/compute_sma_scalp?symbol=BTCRUB")
-    sma_cross_signal = requests.get("http://127.0.0.1:8082/compute_sma_cross_scalp?symbol=BTCRUB")
-    bband_signal = requests.get("http://127.0.0.1:8082/compute_bband_scalp?symbol=BTCRUB")
-    rsi_signal = requests.get("http://127.0.0.1:8082/compute_rsi_scalp?symbol=BTCRUB&thresh=5")
+def update_signal_graph(n):
+    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
+    signal = requests.get("http://127.0.0.1:8082/combined_signal?symbol=BTCRUB&thresh=5")
 
-    if sma_signal.status_code == 200 and bband_signal.status_code == 200 and sma_cross_signal.status_code == 200 and rsi_signal.status_code == 200:
-        sma_data = sma_signal.json()
-        sma_cross_data = sma_cross_signal.json()
-        bband_data = bband_signal.json()
-        rsi_data = rsi_signal.json()
-
+    if signal.status_code == 200:
+        signal_data = signal.json()
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        if signal_data.get("SIG") == 1:
+            marker_symbol = 5
+            marker_color = "green"
+        elif signal_data.get("SIG") == 0:
+            marker_symbol = 0
+            marker_color = "black"
+        elif signal_data.get("SIG") == -1:
+            marker_symbol = 6
+            marker_color = "red"
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
+                                    y=candlestick_dataframe['close'],
+                                    mode='lines+markers',
+                                    name='signaling',
+                                    line_color="white",
+                                    marker_symbol=marker_symbol,
+                                    marker_color=marker_color), row=1, col=1)
+        style = {'padding': '5px', 'fontSize': '16px'}
+        return fig
+    else:
         style = {'padding': '5px', 'fontSize': '16px'}
         return [
-            html.Span(f'sma signal: {sma_data.get("message")}', style=style),
-            html.Span(f'sma cross  signal: {sma_cross_data.get("message")}', style=style),
-            html.Span(f'bband signal: {bband_data.get("message")}', style=style),
-            html.Span(f'rsi signal: {rsi_data.get("message")}', style=style)
+            html.Span('error retrieving data', style=style)
+        ]
+
+
+@app.callback(Output('live-update-signal', 'children'),
+              Input('interval-btc', 'n_intervals'))
+def update_signals(n):
+    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
+    signal = requests.get("http://127.0.0.1:8082/combined_signal?symbol=BTCRUB&thresh=5")
+
+    if signal.status_code == 200:
+        signal_data = signal.json()
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=candlestick_dataframe['close'], mode='lines', name='signaling'), row=1, col=1)
+        style = {'padding': '5px', 'fontSize': '16px'}
+        return [
+            html.Span(f'decided signal: {signal_data.get("message")}', style=style),
+            html.Span(f'sma: {signal_data.get("sma_signal")}, rsi: {signal_data.get("sma_signal")}', style=style),
+            html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style),
         ]
     else:
         style = {'padding': '5px', 'fontSize': '16px'}
