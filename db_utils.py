@@ -231,17 +231,16 @@ class MongoManager():
             else:
                 return 0
 
-    def get_rsi_signal(self, symbol: str):
+    def get_rsi_signal(self, symbol: str, thresh: int):
         current_data = self.get_current_data(symbol)
         if current_data == 404:
             return 404
         else:
             rsi = indicators.get_rsi(DataFrame(current_data))
             last_rsi = rsi.tolist()[-1]
-            self.db_logger.debug(f"last rsi: {last_rsi}, max {rsi.max()} 1/3 of max: {rsi.max()//3} 2/3 of max: {rsi.max()-rsi.max()//3}")
-            if last_rsi > rsi.max()-rsi.max()//3:
+            if last_rsi > rsi.max()-rsi.max()//thresh:
                 return 1
-            elif last_rsi < rsi.max()//3:
+            elif last_rsi < rsi.max()//thresh:
                 return -1
             else:
                 return 0

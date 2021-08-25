@@ -117,7 +117,7 @@ def update_signals(n):
     sma_signal = requests.get("http://127.0.0.1:8082/compute_sma_scalp?symbol=BTCRUB")
     sma_cross_signal = requests.get("http://127.0.0.1:8082/compute_sma_cross_scalp?symbol=BTCRUB")
     bband_signal = requests.get("http://127.0.0.1:8082/compute_bband_scalp?symbol=BTCRUB")
-    rsi_signal = requests.get("http://127.0.0.1:8082/compute_rsi_scalp?symbol=BTCRUB")
+    rsi_signal = requests.get("http://127.0.0.1:8082/compute_rsi_scalp?symbol=BTCRUB&thresh=5")
 
     if sma_signal.status_code == 200 and bband_signal.status_code == 200 and sma_cross_signal.status_code == 200 and rsi_signal.status_code == 200:
         sma_data = sma_signal.json()

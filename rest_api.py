@@ -190,8 +190,8 @@ async def compute_bband_scalp(symbol: str):
 
 
 @app.get("/compute_rsi_scalp", response_class=ORJSONResponse)
-async def compute_rsi_scalp(symbol: str):
-    current_signal = db_manager.get_rsi_signal(symbol)
+async def compute_rsi_scalp(symbol: str, thresh: int):
+    current_signal = db_manager.get_rsi_signal(symbol, thresh)
     if current_signal == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
