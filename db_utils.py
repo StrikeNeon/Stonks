@@ -171,8 +171,8 @@ class MongoManager():
         if not current_data:
             return 404
         else:
-            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[0]
-            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
+            sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[1]
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -221,8 +221,9 @@ class MongoManager():
         if current_data == 404:
             return 404
         else:
-            upper_bb_data = self.recount_bbands(symbol).get("upper_bb")
-            lower_bb_data = self.recount_bbands(symbol).get("lower_bb")
+            bbands = self.recount_bbands(symbol)
+            upper_bb_data = bbands.get("upper_bb")
+            lower_bb_data = bbands.get("lower_bb")
             last_data, last_upper_bb_data, last_lower_bb_data = float(current_data[-1].get("close")), upper_bb_data[-1], lower_bb_data[-1]
             if last_data > last_upper_bb_data:
                 return 1
