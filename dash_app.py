@@ -1,5 +1,5 @@
 import requests
-from pandas import DataFrame
+from pandas import DataFrame, Series
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -19,7 +19,7 @@ app.layout = html.Div(
         dcc.Graph(id='live-update-graph'),
         dcc.Interval(
             id='interval-btc',
-            interval=(1*60)*1000,  # in milliseconds, 60 minutes per interval
+            interval=(1*60)*1000,  # in milliseconds, 60 seconds per interval
             n_intervals=0
         ),
         dcc.Graph(id='live-update-siggraph'),
@@ -53,11 +53,11 @@ def update_main_candlestick(n):
         candlestick_dataframe = DataFrame(current_data.json().get("data"))
         fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
-        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index,
-                        open=candlestick_dataframe['open'],
-                        high=candlestick_dataframe['high'],
-                        low=candlestick_dataframe['low'],
-                        close=candlestick_dataframe['close'], name='market data'), row=1, col=1)
+        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index[-60:],
+                        open=candlestick_dataframe['open'][-60:],
+                        high=candlestick_dataframe['high'][-60:],
+                        low=candlestick_dataframe['low'][-60:],
+                        close=candlestick_dataframe['close'][-60:], name='market data'), row=1, col=1)
 
         # Add titles
         fig.update_layout(
@@ -109,8 +109,8 @@ def update_graph_live(n):
 
         fig = make_subplots(rows=2, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
-                        y=candlestick_dataframe['close'], name='market data'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:],
+                        y=candlestick_dataframe['close'][-60:], name='market data'), row=1, col=1)
 
         # Add titles
         fig.update_layout(
@@ -130,16 +130,16 @@ def update_graph_live(n):
                 ])
             )
         )
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=s_sma, mode='lines', name='short sma'), row=1, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=l_sma, mode='lines', name='long sma'), row=1, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=ema_data, mode='lines', name='ema'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=s_sma[-60:], mode='lines', name='short sma'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=l_sma[-60:], mode='lines', name='long sma'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=ema_data[-60:], mode='lines', name='ema'), row=1, col=1)
 
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
-                        y=candlestick_dataframe['close'], mode='lines', name='market data'), row=2, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=upper_bband, mode='lines', name='upper bband'), row=2, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=lower_bband, mode='lines', name='lower bband'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:],
+                        y=candlestick_dataframe['close'][-60:], mode='lines', name='market data'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=upper_bband[-60:], mode='lines', name='upper bband'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=lower_bband[-60:], mode='lines', name='lower bband'), row=2, col=1)
 
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index, y=rsi_data, mode='lines', name='rsi'), row=1, col=2)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=rsi_data[-60:], mode='lines', name='rsi'), row=1, col=2)
 
         return fig
     else:
@@ -152,7 +152,7 @@ def update_graph_live(n):
 @app.callback(Output('live-update-siggraph', 'figure'),
               Input('interval-btc', 'n_intervals'))
 def update_signal_graph(n):
-    candlestick_dataframe = DataFrame(request_data("http://127.0.0.1:8082/get_current_data?symbol=BTCRUB").get("data"))
+    signals = request_data("http://127.0.0.1:8082/get_combined_signal?symbol=BTCRUB&thresh=5").get("data")
     signal = requests.get("http://127.0.0.1:8082/combined_signal?symbol=BTCRUB&thresh=5")
 
     if signal.status_code == 200:
@@ -167,8 +167,8 @@ def update_signal_graph(n):
         elif signal_data.get("SIG") == -1:
             marker_symbol = 6
             marker_color = "red"
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index,
-                                    y=candlestick_dataframe['close'],
+        fig.append_trace(go.Scatter(x=Series(signals).index,
+                                    y=Series(signals),
                                     mode='lines+markers',
                                     name='signaling',
                                     line_color="white",

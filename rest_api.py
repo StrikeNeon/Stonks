@@ -211,7 +211,6 @@ async def compute_combined_signal(symbol: str, thresh: int):
     current_sma = db_manager.get_sma_signal(symbol)
     current_bbands = db_manager.get_bbands_signal(symbol)
     current_rsi = db_manager.get_rsi_signal(symbol, thresh)
-    print(current_sma == -1 and current_rsi == -1)
     if current_sma == 404 or current_bbands == 404 or current_rsi == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -227,6 +226,18 @@ async def compute_combined_signal(symbol: str, thresh: int):
         return {"message": f"buy {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": -1}
     else:
         return {"message": f"hold {symbol}", "sma_signal": current_sma, "rsi_signal": current_rsi, "bbands_signal": current_bbands, "SIG": 0}
+
+
+@app.get("/get_combined_signal", response_class=ORJSONResponse)
+async def get_combined_signal(symbol: str, thresh: int):
+    current_signal = db_manager.get_signal_frame(symbol, thresh)
+    if current_signal == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    else:
+        return {"message": f"{symbol} signals recounted", "data": current_signal}
 
 
 @app.get("/sync_symbols", response_class=ORJSONResponse)

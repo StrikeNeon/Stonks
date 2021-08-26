@@ -1,4 +1,5 @@
 from pandas import DataFrame
+import numpy as np
 from pymongo import MongoClient, ReturnDocument
 import loguru
 from pydantic import BaseModel
@@ -185,7 +186,7 @@ class MongoManager():
     def recount_last_week(self, symbol: str):
 
         pass
-    
+
     def get_sma_cross_signal(self, symbol: str):
         current_data = self.get_current_data(symbol)
         if current_data == 404:
@@ -245,6 +246,40 @@ class MongoManager():
                 return -1
             else:
                 return 0
+
+    def signal_map(self, data, s_sma, l_sma, rsi, upper_bb, lower_bb, rsi_max, thresh):
+        if data > upper_bb:
+            return 1
+        elif s_sma > upper_bb and rsi > rsi_max-rsi_max//thresh:
+            return 1
+        elif data < lower_bb:
+            return -1
+        elif l_sma < upper_bb and rsi < rsi_max//thresh:
+            return -1
+        else:
+            return 0
+
+    def get_signal_frame(self, symbol: str, thresh: int):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            dataframe = DataFrame(current_data)
+
+            dataframe["short_rolling"], dataframe["long_rolling"] = indicators.get_sma(dataframe)
+            dataframe["rsi"] = indicators.get_rsi(dataframe)
+            dataframe["upper_bb"], dataframe["lower_bb"] = indicators.get_bollinger_bands(dataframe, dataframe["short_rolling"], 40)
+
+            short_rolling, long_rolling = dataframe["short_rolling"].tolist(), dataframe["long_rolling"].tolist()
+            upper_bb, lower_bb = dataframe["upper_bb"].tolist(), dataframe["lower_bb"].tolist()
+            rsi = dataframe["rsi"].tolist()
+            max_rsi = max(rsi)
+            signals = []
+            for row in dataframe["close"].tolist():
+                index = dataframe["close"].tolist().index(row)
+                signal = self.signal_map(row, short_rolling[index], long_rolling[index], rsi[index], upper_bb[index], lower_bb[index], max_rsi, thresh)
+                signals.append(signal)
+            return signals
 
     def sync_banks(self, symbol: str, client: str):
         if client not in self.active_clients.keys():
