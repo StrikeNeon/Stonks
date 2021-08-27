@@ -148,32 +148,38 @@ def update_graph_live(n):
             html.Span('error retrieving data', style=style)
         ]
 
+def set_marker_symbol(point):
+    if point == 1:
+        return  5
+    elif point == 0:
+        return  0
+    elif point == -1:
+        return  6
+
+def set_marker_color(point):
+    if point == 1:
+        return  "green"
+    elif point == 0:
+         return  "black"
+    elif point == -1:
+        return  "red"
+
 
 @app.callback(Output('live-update-siggraph', 'figure'),
               Input('interval-btc', 'n_intervals'))
 def update_signal_graph(n):
     signals = request_data("http://127.0.0.1:8082/get_combined_signal?symbol=BTCRUB&thresh=5").get("data")
-    signal = requests.get("http://127.0.0.1:8082/combined_signal?symbol=BTCRUB&thresh=5")
 
-    if signal.status_code == 200:
-        signal_data = signal.json()
+    if signals:
         fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
-        if signal_data.get("SIG") == 1:
-            marker_symbol = 5
-            marker_color = "green"
-        elif signal_data.get("SIG") == 0:
-            marker_symbol = 0
-            marker_color = "black"
-        elif signal_data.get("SIG") == -1:
-            marker_symbol = 6
-            marker_color = "red"
         fig.append_trace(go.Scatter(x=Series(signals).index,
                                     y=Series(signals),
                                     mode='lines+markers',
                                     name='signaling',
                                     line_color="white",
-                                    marker_symbol=marker_symbol,
-                                    marker_color=marker_color), row=1, col=1)
+                                    marker = dict(color=list(map(set_marker_color, signals)),
+                                                  symbol=list(map(set_marker_symbol, signals)))),
+                                    row=1, col=1)
         fig.update_layout(
             title='BTC to RUB signaling')
         return fig
