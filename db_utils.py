@@ -173,7 +173,7 @@ class MongoManager():
             return 404
         else:
             sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[1]
-            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 40)
+            upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
                                                              {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
@@ -202,17 +202,19 @@ class MongoManager():
             else:
                 return 0
 
-    def get_sma_signal(self, symbol: str):
+    def get_sma_signal(self, symbol: str, thresh: int):
         current_data = self.get_current_data(symbol)
         if current_data == 404:
             return 404
         else:
+            rsi = indicators.get_rsi(DataFrame(current_data))
+            last_rsi = rsi.tolist()[-1]
             s_sma_data = self.recount_sma(symbol).get("short_rolling")
             l_sma_data = self.recount_sma(symbol).get("long_rolling")
             last_data, last_s_sma_data, last_l_sma_data = float(current_data[-1].get("close")), s_sma_data[-1], l_sma_data[-1]
-            if last_s_sma_data < last_data:
+            if last_s_sma_data < last_data and last_rsi > rsi.max()-rsi.max()//thresh:
                 return 1
-            elif last_l_sma_data > last_data:
+            elif last_l_sma_data > last_data and last_rsi < rsi.max()//thresh:
                 return -1
             else:
                 return 0
@@ -229,20 +231,6 @@ class MongoManager():
             if last_data > last_upper_bb_data:
                 return 1
             elif last_data < last_lower_bb_data:
-                return -1
-            else:
-                return 0
-
-    def get_rsi_signal(self, symbol: str, thresh: int):
-        current_data = self.get_current_data(symbol)
-        if current_data == 404:
-            return 404
-        else:
-            rsi = indicators.get_rsi(DataFrame(current_data))
-            last_rsi = rsi.tolist()[-1]
-            if last_rsi > rsi.max()-rsi.max()//thresh:
-                return 1
-            elif last_rsi < rsi.max()//thresh:
                 return -1
             else:
                 return 0
@@ -268,7 +256,7 @@ class MongoManager():
 
             dataframe["short_rolling"], dataframe["long_rolling"] = indicators.get_sma(dataframe)
             dataframe["rsi"] = indicators.get_rsi(dataframe)
-            dataframe["upper_bb"], dataframe["lower_bb"] = indicators.get_bollinger_bands(dataframe, dataframe["short_rolling"], 40)
+            dataframe["upper_bb"], dataframe["lower_bb"] = indicators.get_bollinger_bands(dataframe, dataframe["short_rolling"], 20)
 
             short_rolling, long_rolling = dataframe["short_rolling"].tolist(), dataframe["long_rolling"].tolist()
             upper_bb, lower_bb = dataframe["upper_bb"].tolist(), dataframe["lower_bb"].tolist()

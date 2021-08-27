@@ -22,7 +22,7 @@ app.layout = html.Div(
             interval=(1*60)*1000,  # in milliseconds, 60 seconds per interval
             n_intervals=0
         ),
-        dcc.Graph(id='live-update-siggraph'),
+        dcc.Graph(id='live-update-siggraph')
     ])
 )
 
@@ -194,8 +194,8 @@ def update_signals(n):
         style = {'padding': '5px', 'fontSize': '16px'}
         return [
             html.Span(f'decided signal: {signal_data.get("message")}', style=style),
-            html.Span(f'sma: {signal_data.get("sma_signal")}, rsi: {signal_data.get("rsi_signal")}', style=style),
-            html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style),
+            html.Span(f'rsi-backed sma: {signal_data.get("sma_signal")}', style=style),
+            html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style)
         ]
     else:
         style = {'padding': '5px', 'fontSize': '16px'}
