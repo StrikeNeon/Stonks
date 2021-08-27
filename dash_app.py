@@ -148,21 +148,23 @@ def update_graph_live(n):
             html.Span('error retrieving data', style=style)
         ]
 
+
 def set_marker_symbol(point):
     if point == 1:
-        return  5
+        return 5
     elif point == 0:
-        return  0
+        return 0
     elif point == -1:
-        return  6
+        return 6
+
 
 def set_marker_color(point):
     if point == 1:
-        return  "green"
+        return "green"
     elif point == 0:
-         return  "black"
+         return "black"
     elif point == -1:
-        return  "red"
+        return "red"
 
 
 @app.callback(Output('live-update-siggraph', 'figure'),
