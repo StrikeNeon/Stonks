@@ -78,6 +78,12 @@ async def start_gathering_symbol(symbol: str, client: str, password: str, minute
     return {"message": f"{symbol} gathering started", "task_id": gather_task.id}
 
 
+@app.get("/start_signaling_symbol", response_class=ORJSONResponse)
+async def start_signaling_symbol(symbol: str, minute_interval: int, rsi_thresh: int):
+    gather_task = signaling_task.delay(symbol, minute_interval, rsi_thresh)
+    return {"message": f"{symbol} signaling started", "task_id": gather_task.id}
+
+
 @app.get("/stop_gathering_symbol", response_class=ORJSONResponse)
 async def stop_gathering_symbol(task_id: str):
     stop_data_gathering(task_id)

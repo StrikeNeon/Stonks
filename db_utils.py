@@ -269,6 +269,13 @@ class MongoManager():
                 signals.append(signal)
             return signals
 
+    def write_last_signal(self, symbol: str, rsi_thresh: int):
+        sma = self.get_sma_signal(symbol, rsi_thresh)
+        bbands = self.get_bbands_signal(symbol)
+        if sma == 404 or bbands == 404:
+            self.symbols_collection.find_one_and_update({"symbol_name": symbol},
+                                                         {"$set": {"sma_sig": sma, "bbands_sig": bbands}})
+
     def sync_banks(self, symbol: str, client: str):
         if client not in self.active_clients.keys():
             return 403
