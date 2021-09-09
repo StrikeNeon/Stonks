@@ -19,7 +19,7 @@ app.layout = html.Div(
         dcc.Graph(id='live-update-graph'),
         dcc.Interval(
             id='interval-btc',
-            interval=(1*60)*1000,  # in milliseconds, 60 seconds per interval
+            interval=1*(pow(60, 2)*1000),  # hours in milliseconds, 60x60 seconds per interval
             n_intervals=0
         ),
         dcc.Graph(id='live-update-siggraph')
@@ -53,11 +53,11 @@ def update_main_candlestick(n):
         candlestick_dataframe = DataFrame(current_data.json().get("data"))
         fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
-        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index[-60:],
-                        open=candlestick_dataframe['open'][-60:],
-                        high=candlestick_dataframe['high'][-60:],
-                        low=candlestick_dataframe['low'][-60:],
-                        close=candlestick_dataframe['close'][-60:], name='market data'), row=1, col=1)
+        fig.append_trace(go.Candlestick(x=candlestick_dataframe.index[-12:],
+                        open=candlestick_dataframe['open'][-12:],
+                        high=candlestick_dataframe['high'][-12:],
+                        low=candlestick_dataframe['low'][-12:],
+                        close=candlestick_dataframe['close'][-12:], name='market data'), row=1, col=1)
 
         # Add titles
         fig.update_layout(
@@ -100,17 +100,18 @@ def update_graph_live(n):
     ema_data = request_data("http://127.0.0.1:8082/get_current_ema?symbol=BTCRUB").get("data")
     rsi_data = request_data("http://127.0.0.1:8082/get_current_rsi?symbol=BTCRUB").get("data")
     bbands_data = request_data("http://127.0.0.1:8082/get_current_bbands?symbol=BTCRUB").get("data")
+    pivot_data = request_data("http://127.0.0.1:8082/get_current_pivots?symbol=BTCRUB").get("data")
     try:
         upper_bband = bbands_data.get("upper_bb")
         lower_bband = bbands_data.get("lower_bb")
     except AttributeError:
         pass
-    if type(candlestick_dataframe) != None and type(sma_data) != None and type(ema_data) != None and type(rsi_data) != None and type(bbands_data) != None:
+    if type(candlestick_dataframe) is not None and type(sma_data) is not None and type(ema_data) is not None and type(rsi_data) is not None and type(bbands_data) is not None and type(pivot_data) is not None:
 
         fig = make_subplots(rows=2, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:],
-                        y=candlestick_dataframe['close'][-60:], name='market data'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:],
+                        y=candlestick_dataframe['close'][-12:], name='market data'), row=1, col=1)
 
         # Add titles
         fig.update_layout(
@@ -130,16 +131,17 @@ def update_graph_live(n):
                 ])
             )
         )
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=s_sma[-60:], mode='lines', name='short sma'), row=1, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=l_sma[-60:], mode='lines', name='long sma'), row=1, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=ema_data[-60:], mode='lines', name='ema'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=s_sma[-12:], mode='lines', name='short sma'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=l_sma[-12:], mode='lines', name='long sma'), row=1, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=ema_data[-12:], mode='lines', name='ema'), row=1, col=1)
 
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:],
-                        y=candlestick_dataframe['close'][-60:], mode='lines', name='market data'), row=2, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=upper_bband[-60:], mode='lines', name='upper bband'), row=2, col=1)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=lower_bband[-60:], mode='lines', name='lower bband'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:],
+                        y=candlestick_dataframe['close'][-12:], mode='lines', name='market data'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=upper_bband[-12:], mode='lines', name='upper bband'), row=2, col=1)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=lower_bband[-12:], mode='lines', name='lower bband'), row=2, col=1)
 
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-60:], y=rsi_data[-60:], mode='lines', name='rsi'), row=1, col=2)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=rsi_data[-12:], mode='lines', name='rsi'), row=1, col=2)
+        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=pivot_data[-12:], mode='lines', name='pivots'), row=2, col=2)
 
         return fig
     else:
@@ -162,7 +164,7 @@ def set_marker_color(point):
     if point == 1:
         return "green"
     elif point == 0:
-         return "black"
+        return "black"
     elif point == -1:
         return "red"
 
@@ -172,24 +174,30 @@ def set_marker_color(point):
 def update_signal_graph(n):
     signals = request_data("http://127.0.0.1:8082/get_combined_signal?symbol=BTCRUB&thresh=5").get("data")
 
-    if signals:
+    if signals and signals != 500:
         fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
         fig.append_trace(go.Scatter(x=Series(signals).index,
                                     y=Series(signals),
                                     mode='lines+markers',
                                     name='signaling',
                                     line_color="white",
-                                    marker = dict(color=list(map(set_marker_color, signals)),
-                                                  symbol=list(map(set_marker_symbol, signals)))),
-                                    row=1, col=1)
+                                    marker=dict(color=list(map(set_marker_color, signals)),
+                                                symbol=list(map(set_marker_symbol, signals)))),
+                        row=1, col=1)
         fig.update_layout(
             title='BTC to RUB signaling')
         return fig
     else:
-        style = {'padding': '5px', 'fontSize': '16px'}
-        return [
-            html.Span('error retrieving data', style=style)
-        ]
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=[0],
+                                    y=[0],
+                                    mode='lines+markers',
+                                    name='error',
+                                    line_color="white"),
+                        row=1, col=1)
+        fig.update_layout(
+            title='ERROR')
+        return fig
 
 
 @app.callback(Output('live-update-signal', 'children'),
@@ -203,7 +211,8 @@ def update_signals(n):
         return [
             html.Span(f'decided signal: {signal_data.get("message")}', style=style),
             html.Span(f'rsi-backed sma: {signal_data.get("sma_signal")}', style=style),
-            html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style)
+            html.Span(f'bbands: {signal_data.get("bbands_signal")}', style=style),
+            html.Span(f'pivots: {signal_data.get("pivot_signal")}', style=style)
         ]
     else:
         style = {'padding': '5px', 'fontSize': '16px'}

@@ -6,7 +6,7 @@ from fastapi import (FastAPI, HTTPException,
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
 from db_utils import MongoManager
-from background_tasks import data_gathering_task, stop_data_gathering
+from background_tasks import data_gathering_task, stop_data_gathering, signaling_task
 
 app = FastAPI()
 db_manager = MongoManager()
@@ -68,19 +68,19 @@ async def get_account_status(client: str):
             "trade status data": trade_status_data}
 
 @app.get("/start_gathering_symbol", response_class=ORJSONResponse)
-async def start_gathering_symbol(symbol: str, client: str, password: str, minute_interval: int):
+async def start_gathering_symbol(symbol: str, client: str, password: str, hour_interval: int):
     # TODO login with token here?
     # TODO add latest active task to current data task
     # This is a crutch, client activation (db_manager.add_client) should be a separate endpoint
     # and this should verify token, but celery doesn't detect changes in active clients
     # though binance care about ips and not connections
-    gather_task = data_gathering_task.delay(symbol, client, password, minute_interval)
+    gather_task = data_gathering_task.delay(symbol, client, password, hour_interval)
     return {"message": f"{symbol} gathering started", "task_id": gather_task.id}
 
 
 @app.get("/start_signaling_symbol", response_class=ORJSONResponse)
-async def start_signaling_symbol(symbol: str, minute_interval: int, rsi_thresh: int):
-    gather_task = signaling_task.delay(symbol, minute_interval, rsi_thresh)
+async def start_signaling_symbol(symbol: str, hour_interval: int, rsi_thresh: int):
+    gather_task = signaling_task.delay(symbol, hour_interval, rsi_thresh)
     return {"message": f"{symbol} signaling started", "task_id": gather_task.id}
 
 
@@ -139,7 +139,7 @@ async def get_current_rsi(symbol: str):
 
 
 @app.get("/get_current_bbands", response_class=ORJSONResponse)
-async def get_current_sma(symbol: str):
+async def get_current_bbands(symbol: str):
     current_bbands = db_manager.recount_bbands(symbol)
     if current_bbands == 404:
         raise HTTPException(
@@ -148,6 +148,18 @@ async def get_current_sma(symbol: str):
         )
     else:
         return {"message": f"{symbol} sma recounted", "data": current_bbands}
+
+
+@app.get("/get_current_pivots", response_class=ORJSONResponse)
+async def get_current_pivots(symbol: str):
+    current_pivots = db_manager.recount_pivots(symbol)
+    if current_pivots == 404:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"symbol {symbol} not found"
+        )
+    else:
+        return {"message": f"{symbol} pivots recounted", "data": current_pivots}
 
 
 @app.get("/compute_sma_scalp", response_class=ORJSONResponse)
@@ -200,21 +212,26 @@ async def compute_bband_scalp(symbol: str):
 async def compute_combined_signal(symbol: str, thresh: int):
     current_sma = db_manager.get_sma_signal(symbol, thresh)
     current_bbands = db_manager.get_bbands_signal(symbol)
-    if current_sma == 404 or current_bbands == 404:
+    current_pivot = db_manager.get_pivot_signal(symbol)
+    if current_sma == 404 or current_bbands == 404 or current_pivot == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"symbol {symbol} not found"
         )
+    elif current_pivot == 1:
+        return {"message": f"sell {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_bbands == 1:
-        return {"message": f"sell {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
+        return {"message": f"sell {symbol}","pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_sma == 1:
-        return {"message": f"sell {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
+        return {"message": f"sell {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
+    elif current_pivot == -1:
+        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_bbands == -1:
-        return {"message": f"buy {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
+        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
     elif current_sma == -1:
-        return {"message": f"buy {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
+        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
     else:
-        return {"message": f"hold {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 0}
+        return {"message": f"hold {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 0}
 
 
 @app.get("/get_combined_signal", response_class=ORJSONResponse)

@@ -1,9 +1,10 @@
-from pandas import DataFrame
+from pandas import DataFrame, date_range
 import numpy as np
 from pymongo import MongoClient, ReturnDocument
 import loguru
 from pydantic import BaseModel
 from typing import Optional
+from zigzag import peak_valley_pivots
 from data_ops import technical_indicators, binance_api
 from fastapi.security import OAuth2PasswordBearer
 from passlib.exc import UnknownHashError
@@ -179,6 +180,25 @@ class MongoManager():
                                                                                      "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("bband_data")
 
+    def recount_pivots(self, symbol: str):
+        current_data = self.symbols_collection.find_one({"symbol_name": symbol})
+        if not current_data:
+            return 404
+        else:
+            current_dataframe = DataFrame(current_data.get("candlestick_data"))
+            current_time = datetime.now()
+            start_time = current_time - timedelta(minutes=len(current_dataframe.index))
+            date_times = []
+            while start_time < current_time:
+                start_time += timedelta(minutes=1)
+                date_times.append(start_time)
+            # dates = date_range(current_time, start_time, freq='M').tolist() # TODO Fix - add proper minute interval generation
+            current_dataframe.index = date_times
+            pivots = peak_valley_pivots(current_dataframe['close'].values, 0.1, -0.1)
+            current_pivots = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
+                                                             {"$set": {"pivot_data": pivots.tolist()}}, return_document=ReturnDocument.AFTER)
+            return current_pivots.get("pivot_data")
+
     def recount_last_day(self, symbol: str):
 
         pass
@@ -235,8 +255,21 @@ class MongoManager():
             else:
                 return 0
 
-    def signal_map(self, data, s_sma, l_sma, rsi, upper_bb, lower_bb, rsi_max, thresh):
-        if data > upper_bb:
+    def get_pivot_signal(self, symbol: str):
+        current_data = self.get_current_data(symbol)
+        if current_data == 404:
+            return 404
+        else:
+            pivots = self.recount_pivots(symbol)
+            last_pivot = pivots[-1]
+            return last_pivot
+
+    def signal_map(self, data, pivot, s_sma, l_sma, rsi, upper_bb, lower_bb, rsi_max, thresh):
+        if pivot == 1:
+            return 1
+        elif pivot == -1:
+            return -1
+        elif data > upper_bb:
             return 1
         elif s_sma > upper_bb and rsi > rsi_max-rsi_max//thresh:
             return 1
@@ -252,20 +285,22 @@ class MongoManager():
         if current_data == 404:
             return 404
         else:
-            dataframe = DataFrame(current_data)
+            candlestick_closing = DataFrame(current_data)["close"].tolist()
+            tech_data = self.symbols_collection.find_one({"symbol_name": symbol})
+            sma = tech_data.get("sma_data")
+            short_rolling, long_rolling = sma.get("short_rolling"), sma.get("long_rolling")
+            rsi = tech_data.get("rsi_data")
+            bbands = tech_data.get("bband_data")
+            upper_bb, lower_bb = bbands.get("upper_bb"), bbands.get("lower_bb")
 
-            dataframe["short_rolling"], dataframe["long_rolling"] = indicators.get_sma(dataframe)
-            dataframe["rsi"] = indicators.get_rsi(dataframe)
-            dataframe["upper_bb"], dataframe["lower_bb"] = indicators.get_bollinger_bands(dataframe, dataframe["short_rolling"], 20)
-
-            short_rolling, long_rolling = dataframe["short_rolling"].tolist(), dataframe["long_rolling"].tolist()
-            upper_bb, lower_bb = dataframe["upper_bb"].tolist(), dataframe["lower_bb"].tolist()
-            rsi = dataframe["rsi"].tolist()
             max_rsi = max(rsi)
+            pivots = self.recount_pivots(symbol)
+            if len(short_rolling) != len(candlestick_closing) or len(pivots) != len(candlestick_closing):
+                return 500
             signals = []
-            for row in dataframe["close"].tolist():
-                index = dataframe["close"].tolist().index(row)
-                signal = self.signal_map(row, short_rolling[index], long_rolling[index], rsi[index], upper_bb[index], lower_bb[index], max_rsi, thresh)
+            for row in candlestick_closing:
+                index = candlestick_closing.index(row)
+                signal = self.signal_map(row, pivots[index], short_rolling[index], long_rolling[index], rsi[index], upper_bb[index], lower_bb[index], max_rsi, thresh)
                 signals.append(signal)
             return signals
 

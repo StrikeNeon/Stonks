@@ -21,7 +21,7 @@ class binance_api():
         return symbols
 
     def get_current_data(self, symbol):
-        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=60)
+        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1HOUR, limit=48)
         data = [{"open": float(record[1]),
                  "high": float(record[2]),
                  "low": float(record[3]),
@@ -33,7 +33,7 @@ class binance_api():
         return data
 
     def get_data_tick(self, symbol, interval):
-        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1MINUTE, limit=1*interval)
+        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1HOUR, limit=1*interval)
         data = [{"open": float(record[1]),
                  "high": float(record[2]),
                  "low": float(record[3]),
