@@ -195,8 +195,9 @@ class MongoManager():
             # dates = date_range(current_time, start_time, freq='M').tolist() # TODO Fix - add proper minute interval generation
             current_dataframe.index = date_times
             pivots = peak_valley_pivots(current_dataframe['close'].values, 0.1, -0.1)
+            pivots = [pivot*-1 for pivot in pivots.tolist()]
             current_pivots = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
-                                                             {"$set": {"pivot_data": pivots.tolist()}}, return_document=ReturnDocument.AFTER)
+                                                             {"$set": {"pivot_data": pivots}}, return_document=ReturnDocument.AFTER)
             return current_pivots.get("pivot_data")
 
     def recount_last_day(self, symbol: str):

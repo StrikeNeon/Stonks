@@ -37,7 +37,7 @@ def data_gathering_task(symbol: str, client: str, password: str, hour_interval: 
     if db_manager.get_current_data(symbol) == 404:
         db_manager.setup_symbol(symbol, client)
         celery_log.info(f"{symbol} has been set up")
-    schedule.every(24).hours.do(db_manager.setup_symbol, symbol, client)
+    schedule.every(72).hours.do(db_manager.setup_symbol, symbol, client)
     schedule.every(hour_interval).hours.do(db_manager.add_symbol_tick, symbol, client, hour_interval)
     celery_log.info(f"{client} started gathering {symbol} data")
     while True:

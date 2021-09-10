@@ -21,7 +21,7 @@ class binance_api():
         return symbols
 
     def get_current_data(self, symbol):
-        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1HOUR, limit=48)
+        raw_data = self.client.get_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1HOUR, limit=72)
         data = [{"open": float(record[1]),
                  "high": float(record[2]),
                  "low": float(record[3]),
