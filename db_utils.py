@@ -187,12 +187,11 @@ class MongoManager():
         else:
             current_dataframe = DataFrame(current_data.get("candlestick_data"))
             current_time = datetime.now()
-            start_time = current_time - timedelta(minutes=len(current_dataframe.index))
+            start_time = current_time - timedelta(hours=len(current_dataframe.index))
             date_times = []
             while start_time < current_time:
-                start_time += timedelta(minutes=1)
+                start_time += timedelta(hours=1)
                 date_times.append(start_time)
-            # dates = date_range(current_time, start_time, freq='M').tolist() # TODO Fix - add proper minute interval generation
             current_dataframe.index = date_times
             pivots = peak_valley_pivots(current_dataframe['close'].values, 0.1, -0.1)
             pivots = [pivot*-1 for pivot in pivots.tolist()]
