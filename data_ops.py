@@ -57,8 +57,8 @@ class binance_api():
         dataframe = pd.DataFrame(data)
         return dataframe
 
-    def get_two_week_history(self, symbol):
-        raw_data = self.client.get_historical_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1DAY, limit=14, start_str='2 weeks ago UTC')
+    def get_hundred_day_stats(self, symbol):
+        raw_data = self.client.get_historical_klines(symbol=symbol, interval=Client.KLINE_INTERVAL_1DAY, limit=100, start_str='100 days ago UTC')
         data = [{"open": record[1],
                  "high": record[2],
                  "low": record[3],

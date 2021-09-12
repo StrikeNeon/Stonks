@@ -176,28 +176,27 @@ class MongoManager():
             sma = indicators.get_sma(DataFrame(current_data.get("candlestick_data")))[1]
             upper_bb, lower_bb = indicators.get_bollinger_bands(DataFrame(current_data.get("candlestick_data")), sma, 20)
             current_rsi = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
-                                                             {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
-                                                                                     "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
+                                                                      {"$set": {"bband_data":{"upper_bb": upper_bb.tolist(),
+                                                                                              "lower_bb": lower_bb.tolist()}}}, return_document=ReturnDocument.AFTER)
             return current_rsi.get("bband_data")
 
-    def recount_pivots(self, symbol: str):
-        current_data = self.symbols_collection.find_one({"symbol_name": symbol})
-        if not current_data:
-            return 404
-        else:
-            current_dataframe = DataFrame(current_data.get("candlestick_data"))
+    def recount_pivots(self, symbol: str, client: str):
+        if client in self.active_clients.keys():
+            start_data = self.active_clients.get(client).get_hundred_day_stats(symbol)
+            current_dataframe = DataFrame(start_data)
             current_time = datetime.now()
-            start_time = current_time - timedelta(hours=len(current_dataframe.index))
+            start_time = current_time - timedelta(days=len(current_dataframe.index))
             date_times = []
             while start_time < current_time:
-                start_time += timedelta(hours=1)
+                start_time += timedelta(days=1)
                 date_times.append(start_time)
             current_dataframe.index = date_times
-            pivots = peak_valley_pivots(current_dataframe['close'].values, 0.1, -0.1)
+            pivots = peak_valley_pivots([float(value) for value in current_dataframe['close'].values], 0.1, -0.1)
             pivots = [pivot*-1 for pivot in pivots.tolist()]
-            current_pivots = self.symbols_collection.find_one_and_update({"symbol_name": symbol},
-                                                             {"$set": {"pivot_data": pivots}}, return_document=ReturnDocument.AFTER)
-            return current_pivots.get("pivot_data")
+            self.db_logger.info(f"pivot data requested for {symbol}")
+            return pivots
+        else:
+            return 403
 
     def recount_last_day(self, symbol: str):
 
@@ -256,20 +255,12 @@ class MongoManager():
                 return 0
 
     def get_pivot_signal(self, symbol: str):
-        current_data = self.get_current_data(symbol)
-        if current_data == 404:
-            return 404
-        else:
-            pivots = self.recount_pivots(symbol)
-            last_pivot = pivots[-1]
-            return last_pivot
+        pivots = self.recount_pivots(symbol)
+        last_pivot = pivots[-1]
+        return last_pivot
 
-    def signal_map(self, data, pivot, s_sma, l_sma, rsi, upper_bb, lower_bb, rsi_max, thresh):
-        if pivot == 1:
-            return 1
-        elif pivot == -1:
-            return -1
-        elif data > upper_bb:
+    def signal_map(self, data, s_sma, l_sma, rsi, upper_bb, lower_bb, rsi_max, thresh):
+        if data > upper_bb:
             return 1
         elif s_sma > upper_bb and rsi > rsi_max-rsi_max//thresh:
             return 1
@@ -294,13 +285,12 @@ class MongoManager():
             upper_bb, lower_bb = bbands.get("upper_bb"), bbands.get("lower_bb")
 
             max_rsi = max(rsi)
-            pivots = self.recount_pivots(symbol)
-            if len(short_rolling) != len(candlestick_closing) or len(pivots) != len(candlestick_closing):
+            if len(short_rolling) != len(candlestick_closing):
                 return 500
             signals = []
             for row in candlestick_closing:
                 index = candlestick_closing.index(row)
-                signal = self.signal_map(row, pivots[index], short_rolling[index], long_rolling[index], rsi[index], upper_bb[index], lower_bb[index], max_rsi, thresh)
+                signal = self.signal_map(row, short_rolling[index], long_rolling[index], rsi[index], upper_bb[index], lower_bb[index], max_rsi, thresh)
                 signals.append(signal)
             return signals
 

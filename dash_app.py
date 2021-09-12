@@ -22,7 +22,13 @@ app.layout = html.Div(
             interval=1*(pow(60, 2)*1000),  # hours in milliseconds, 60x60 seconds per interval
             n_intervals=0
         ),
-        dcc.Graph(id='live-update-siggraph')
+        dcc.Interval(
+            id='interval-btc-pivot',
+            interval=24*(pow(60, 2)*1000),  # hours in milliseconds, 60x60 seconds per interval
+            n_intervals=0
+        ),
+        dcc.Graph(id='live-update-siggraph'),
+        dcc.Graph(id='live-update-pivotgraph')
     ])
 )
 
@@ -79,10 +85,16 @@ def update_main_candlestick(n):
         )
         return fig
     else:
-        style = {'padding': '5px', 'fontSize': '16px'}
-        return [
-            html.Span('error retrieving data', style=style)
-        ]
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=[0],
+                                    y=[0],
+                                    mode='lines+markers',
+                                    name='error',
+                                    line_color="white"),
+                        row=1, col=1)
+        fig.update_layout(
+            title='ERROR')
+        return fig
 
 
 # Multiple components can update everytime interval gets fired.
@@ -100,13 +112,12 @@ def update_graph_live(n):
     ema_data = request_data("http://127.0.0.1:8082/get_current_ema?symbol=BTCRUB").get("data")
     rsi_data = request_data("http://127.0.0.1:8082/get_current_rsi?symbol=BTCRUB").get("data")
     bbands_data = request_data("http://127.0.0.1:8082/get_current_bbands?symbol=BTCRUB").get("data")
-    pivot_data = request_data("http://127.0.0.1:8082/get_current_pivots?symbol=BTCRUB").get("data")
     try:
         upper_bband = bbands_data.get("upper_bb")
         lower_bband = bbands_data.get("lower_bb")
     except AttributeError:
         pass
-    if type(candlestick_dataframe) is not None and type(sma_data) is not None and type(ema_data) is not None and type(rsi_data) is not None and type(bbands_data) is not None and type(pivot_data) is not None:
+    if type(candlestick_dataframe) is not None and type(sma_data) is not None and type(ema_data) is not None and type(rsi_data) is not None and type(bbands_data) is not None :
 
         fig = make_subplots(rows=2, cols=2, vertical_spacing=0.5, horizontal_spacing=0.1)
         #Candlestick
@@ -141,15 +152,54 @@ def update_graph_live(n):
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=lower_bband[-12:], mode='lines', name='lower bband'), row=2, col=1)
 
         fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=rsi_data[-12:], mode='lines', name='rsi'), row=1, col=2)
-        fig.append_trace(go.Scatter(x=candlestick_dataframe.index[-12:], y=pivot_data[-12:], mode='lines', name='pivots'), row=2, col=2)
 
         return fig
     else:
-        style = {'padding': '5px', 'fontSize': '16px'}
-        return [
-            html.Span('error retrieving data', style=style)
-        ]
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=[0],
+                                    y=[0],
+                                    mode='lines+markers',
+                                    name='error',
+                                    line_color="white"),
+                        row=1, col=1)
+        fig.update_layout(
+            title='ERROR')
+        return fig
 
+@app.callback(Output('live-update-pivotgraph', 'figure'),
+              Input('interval-btc-pivot', 'n_intervals'))
+def update_pivot_graph(n):
+    current_data = requests.get("http://127.0.0.1:8082/get_current_pivots?symbol=BTCRUB&client=CEOMindset_1")
+    if current_data.status_code == 403:
+        login_status = requests.get("http://127.0.0.1:8082/activate_client?client=CEOMindset_1&password=TheValueOfVifeIsNegative")
+        current_data = requests.get("http://127.0.0.1:8082/get_current_pivots?symbol=BTCRUB&client=CEOMindset_1")
+        if login_status.status_code != 200:
+            fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+            fig.append_trace(go.Scatter(x=[0],
+                                        y=[0],
+                                        mode='lines+markers',
+                                        name='error',
+                                        line_color="white"),
+                            row=1, col=1)
+            fig.update_layout(
+                title='ERROR {current_data.status_code}')
+            return fig
+    if current_data.status_code == 200:
+        pivot_data = current_data.json().get("data")
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=list(range(len(pivot_data))), y=pivot_data, mode='lines', name='pivots'), row=1, col=1)
+        return fig
+    else:
+        fig = make_subplots(rows=1, cols=1, vertical_spacing=0.5, horizontal_spacing=0.1)
+        fig.append_trace(go.Scatter(x=[0],
+                                    y=[0],
+                                    mode='lines+markers',
+                                    name='error',
+                                    line_color="white"),
+                        row=1, col=1)
+        fig.update_layout(
+            title='ERROR')
+        return fig
 
 def set_marker_symbol(point):
     if point == 1:

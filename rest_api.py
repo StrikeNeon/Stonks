@@ -151,12 +151,17 @@ async def get_current_bbands(symbol: str):
 
 
 @app.get("/get_current_pivots", response_class=ORJSONResponse)
-async def get_current_pivots(symbol: str):
-    current_pivots = db_manager.recount_pivots(symbol)
+async def get_current_pivots(client: str, symbol: str):
+    current_pivots = db_manager.recount_pivots(symbol, client)
     if current_pivots == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"symbol {symbol} not found"
+        )
+    elif current_pivots == 403:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"client {client} inactive"
         )
     else:
         return {"message": f"{symbol} pivots recounted", "data": current_pivots}
@@ -212,26 +217,21 @@ async def compute_bband_scalp(symbol: str):
 async def compute_combined_signal(symbol: str, thresh: int):
     current_sma = db_manager.get_sma_signal(symbol, thresh)
     current_bbands = db_manager.get_bbands_signal(symbol)
-    current_pivot = db_manager.get_pivot_signal(symbol)
-    if current_sma == 404 or current_bbands == 404 or current_pivot == 404:
+    if current_sma == 404 or current_bbands == 404:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"symbol {symbol} not found"
         )
-    elif current_pivot == 1:
-        return {"message": f"sell {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_bbands == 1:
-        return {"message": f"sell {symbol}","pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
+        return {"message": f"sell {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_sma == 1:
-        return {"message": f"sell {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
-    elif current_pivot == -1:
-        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
+        return {"message": f"sell {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 1}
     elif current_bbands == -1:
-        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
+        return {"message": f"buy {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
     elif current_sma == -1:
-        return {"message": f"buy {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
+        return {"message": f"buy {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": -1}
     else:
-        return {"message": f"hold {symbol}", "pivot_signal": current_pivot, "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 0}
+        return {"message": f"hold {symbol}", "sma_signal": current_sma, "bbands_signal": current_bbands, "SIG": 0}
 
 
 @app.get("/get_combined_signal", response_class=ORJSONResponse)
